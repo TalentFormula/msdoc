@@ -38,7 +38,7 @@
 //	writer.SetAuthor("John Doe")
 //	writer.AddParagraph("Hello, World!")
 //	err := writer.Save("output.doc")
-package pkg
+package msdoc
 
 import (
 	"fmt"

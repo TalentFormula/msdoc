@@ -22,10 +22,10 @@
 //
 // This implementation provides complete document creation capabilities including
 // text content, formatting, metadata, and proper OLE2 structure generation.
-package pkg
+package msdoc
 
 import (
-	"github.com/TalentFormula/msdoc/writer"
+    "github.com/TalentFormula/msdoc/writer"
 )
 
 // DocumentWriter provides functionality for creating and modifying .doc files.
@@ -35,5 +35,5 @@ type DocumentWriter = writer.DocumentWriter
 // NewDocumentWriter creates a new document writer for creating .doc files.
 // This function replaces the previous stub implementation with full functionality.
 func NewDocumentWriter() *DocumentWriter {
-	return writer.NewDocumentWriter()
+    return writer.NewDocumentWriter()
 }
