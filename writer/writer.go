@@ -265,6 +265,7 @@ func (dw *DocumentWriter) needsUnicode(text string) bool {
 func (dw *DocumentWriter) addUnicodeText(text string) {
 	for _, r := range text {
 		// Write as UTF-16LE
+		// It is safe to ignore the error from binary.Write here because bytes.Buffer.Write never returns an error.
 		binary.Write(&dw.pieceTable.text, binary.LittleEndian, uint16(r))
 	}
 }
