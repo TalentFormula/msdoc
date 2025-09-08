@@ -37,3 +37,41 @@ msdoc/
     └── ole2_test.go
 
 ```
+
+## (Planned) Public High Level API
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/TalentFormula/msdoc/pkg"
+)
+
+func main() {
+	// Open a .doc file
+	doc, err := msdoc.Open("sample.doc")
+	if err != nil {
+		log.Fatalf("failed to open DOC: %v", err)
+	}
+	defer doc.Close()
+
+	// Extract plain text
+	text, err := doc.Text()
+	if err != nil {
+		log.Fatalf("failed to extract text: %v", err)
+	}
+	fmt.Println("=== Document Text ===")
+	fmt.Println(text)
+
+	// Extract metadata
+	meta := doc.Metadata()
+	fmt.Println("=== Metadata ===")
+	fmt.Printf("Title: %s\n", meta.Title)
+	fmt.Printf("Author: %s\n", meta.Author)
+	fmt.Printf("Created: %s\n", meta.Created)
+}
+```
+
