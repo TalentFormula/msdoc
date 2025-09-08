@@ -52,8 +52,8 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 		return nil, errors.New("ole2: invalid signature")
 	}
 
-	// Parse directory start sector manually (account for different file formats)
-	dirStartSector := int32(binary.LittleEndian.Uint32(headerBytes[46:50])) // Test files use offset 46
+	// Parse directory start sector according to OLE2 specification (offset 48-52)
+	dirStartSector := int32(binary.LittleEndian.Uint32(headerBytes[48:52]))
 
 	difatBytes := make([]byte, 436)
 	if _, err := r.ReadAt(difatBytes, 76); err != nil {
