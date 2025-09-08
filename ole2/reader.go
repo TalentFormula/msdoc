@@ -57,18 +57,29 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 		DIFATStart        int32
 		NumDIFATSectors   uint32
 	}
-	err := binary.Read(io.NewSectionReader(r, 0, 76), binary.LittleEndian, &header)
-	if err != nil {
+
+	// The header is 76 bytes long.
+	headerBytes := make([]byte, 76)
+	if _, err := r.ReadAt(headerBytes, 0); err != nil {
+		return nil, fmt.Errorf("ole2: failed to read header: %w", err)
+	}
+
+	if err := binary.Read(bytes.NewReader(headerBytes), binary.LittleEndian, &header); err != nil {
 		return nil, err
 	}
+
 	if header.Signature != headerSignature {
 		return nil, errors.New("ole2: invalid signature")
 	}
 
-	// Read DIFAT
+	// Read DIFAT (starts at offset 76 in the header sector)
+	difatBytes := make([]byte, 436)
+	if _, err := r.ReadAt(difatBytes, 76); err != nil {
+		return nil, fmt.Errorf("ole2: failed to read DIFAT: %w", err)
+	}
+
 	difat := make([]int32, 109)
-	err = binary.Read(io.NewSectionReader(r, 76, 436), binary.LittleEndian, &difat)
-	if err != nil {
+	if err := binary.Read(bytes.NewReader(difatBytes), binary.LittleEndian, &difat); err != nil {
 		return nil, err
 	}
 
@@ -86,15 +97,14 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 	}
 
 	fat := make([]uint32, len(fatSectors)/4)
-	err = binary.Read(bytes.NewReader(fatSectors), binary.LittleEndian, &fat)
-	if err != nil {
+	if err := binary.Read(bytes.NewReader(fatSectors), binary.LittleEndian, &fat); err != nil {
 		return nil, err
 	}
 
 	// Read directory stream
 	var dirStream []byte
 	sectorNum := header.DirStartSector
-	for sectorNum >= 0 {
+	for sectorNum >= 0 && sectorNum < int32(len(fat)) {
 		sector := make([]byte, sectorSize)
 		_, err := r.ReadAt(sector, int64(sectorNum+1)*sectorSize)
 		if err != nil {
@@ -106,8 +116,7 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 
 	numDirs := len(dirStream) / dirEntrySize
 	dirEntries := make([]dirEntry, numDirs)
-	err = binary.Read(bytes.NewReader(dirStream), binary.LittleEndian, &dirEntries)
-	if err != nil {
+	if err := binary.Read(bytes.NewReader(dirStream), binary.LittleEndian, &dirEntries); err != nil {
 		return nil, err
 	}
 
@@ -118,7 +127,7 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 func (r *Reader) ReadStream(name string) ([]byte, error) {
 	for _, entry := range r.dirEntries {
 		if entry.ObjectType == 2 { // Stream Object
-			entryName := utf16BytesToString(entry.Name[:], entry.NameLen)
+			entryName := utf16BytesToString(entry.Name, entry.NameLen)
 			if entryName == name {
 				var streamData []byte
 				sectorNum := entry.StartingSector
@@ -132,6 +141,9 @@ func (r *Reader) ReadStream(name string) ([]byte, error) {
 					sectorNum = int32(r.fat[sectorNum])
 				}
 				// Trim to actual size
+				if entry.StreamSize > uint64(len(streamData)) {
+					return nil, fmt.Errorf("ole2: stream '%s' is truncated, expected %d bytes, got %d", name, entry.StreamSize, len(streamData))
+				}
 				return streamData[:entry.StreamSize], nil
 			}
 		}
@@ -140,14 +152,16 @@ func (r *Reader) ReadStream(name string) ([]byte, error) {
 }
 
 // utf16BytesToString converts a UTF-16 byte sequence from a directory entry to a Go string.
-func utf16BytesToString(b []uint16, nameLen uint16) string {
-	if nameLen == 0 {
+func utf16BytesToString(name [32]uint16, nameLen uint16) string {
+	// nameLen is in bytes. If it's less than 2, it's an empty name.
+	if nameLen < 2 {
 		return ""
 	}
-	// Name length includes the null terminator, so we subtract it.
-	end := (nameLen / 2) - 1
-	if end > uint16(len(b)) {
-		end = uint16(len(b))
+	// The length includes a null terminator, so we subtract it from the character count.
+	numChars := (nameLen / 2) - 1
+	if numChars > 32 { // Sanity check
+		numChars = 32
 	}
-	return string(utf16.Decode(b[:end]))
+	runes := utf16.Decode(name[:numChars])
+	return string(runes)
 }
