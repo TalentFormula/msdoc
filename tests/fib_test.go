@@ -34,10 +34,6 @@ func TestParseFIB(t *testing.T) {
 	offset += 2 + fibRgLwSize // Skip over fibRgLw
 	binary.LittleEndian.PutUint16(fibBytes[offset:], cbRgFcLcb)  
 	offset += 2 // Offset is now at the start of the blob
-	
-	t.Logf("csw written at offset %d", 32)
-	t.Logf("cslw written at offset %d", 32+2+28)
-	t.Logf("cbRgFcLcb written at offset %d", 32+2+28+2+fibRgLwSize)
 
 	// --- Populate key values in RgFcLcbBlob ---
 	// For Word 97 (nFib=0x00C1), fcClx/lcbClx are at offset 264 within the blob.
@@ -49,17 +45,10 @@ func TestParseFIB(t *testing.T) {
 	binary.LittleEndian.PutUint32(fibBytes[offset+fcClxOffsetInBlob+4:], lcbClx)
 
 	// --- Run the test ---
-	t.Logf("Total fib data size: %d bytes", len(fibBytes))
-	t.Logf("Blob size: %d bytes", blobSizeInBytes)
-	t.Logf("Expected FcClx at blob offset %d", fcClxOffsetInBlob)
-	
 	parsedFIB, err := fib.ParseFIB(fibBytes)
 	if err != nil {
 		t.Fatalf("ParseFIB failed: %v", err)
 	}
-	
-	t.Logf("Parsed blob size: %d bytes", len(parsedFIB.RgFcLcbBlob))
-	t.Logf("cbRgFcLcb: %d", parsedFIB.CbRgFcLcb)
 
 	if parsedFIB.Base.WIdent != wIdent {
 		t.Errorf("Expected wIdent 0x%X, got 0x%X", wIdent, parsedFIB.Base.WIdent)

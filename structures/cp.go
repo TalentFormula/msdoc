@@ -1,11 +1,18 @@
 package structures
 
+import "fmt"
+
 // CP (Character Position) is an unsigned 32-bit integer that specifies
 // a zero-based index of a character in the document text.
 type CP uint32
 
 // MaxCP is the maximum valid character position value.
 const MaxCP = CP(0x7FFFFFFF)
+
+// Common errors
+var (
+	ErrInvalidCP = fmt.Errorf("invalid character position")
+)
 
 // IsValid returns true if the CP value is within valid range.
 func (cp CP) IsValid() bool {

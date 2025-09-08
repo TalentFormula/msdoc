@@ -10,6 +10,18 @@ import (
 )
 
 // Text extracts the plain text content from the document.
+//
+// This method parses the document's piece table to reconstruct the original text
+// from potentially fragmented pieces stored throughout the file. It handles both
+// ANSI and Unicode text encoding as specified in the MS-DOC format.
+//
+// Returns an error if:
+//   - The document is encrypted (encryption support not yet implemented)
+//   - The piece table is corrupted or invalid
+//   - Required streams (WordDocument, Table) cannot be read
+//   - Text data extends beyond stream boundaries
+//
+// For documents with no text content, returns an empty string with no error.
 func (d *Document) Text() (string, error) {
 	// Check if document is encrypted
 	if d.fib.IsEncrypted() {
@@ -107,7 +119,16 @@ func (d *Document) Text() (string, error) {
 }
 
 // Metadata extracts high-level metadata from the document.
-// In a complete implementation, this would parse the OLE SummaryInformation stream.
+//
+// This method attempts to parse the OLE SummaryInformation stream to extract
+// document properties such as title, author, and creation date. If the stream
+// is not available or cannot be parsed, default values are returned.
+//
+// The current implementation provides basic metadata extraction. A complete
+// implementation would fully parse the property set stream format and handle
+// all standard document properties defined in the OLE specification.
+//
+// Returns a Metadata structure with available information, never returns an error.
 func (d *Document) Metadata() Metadata {
 	// Try to parse summary information stream
 	summaryData, err := d.reader.ReadStream("\x05SummaryInformation")
