@@ -3,10 +3,11 @@ package tests
 import (
     "bytes"
     "encoding/binary"
-    "github.com/TalentFormula/msdoc/pkg/msdoc"
     "os"
     "testing"
     "unicode/utf16"
+
+    "github.com/TalentFormula/msdoc/pkg/msdoc"
 )
 
 // createMockDocFile creates a complete, minimal .doc file in a byte buffer
@@ -51,7 +52,7 @@ func createMockDocFile(t *testing.T) []byte {
         binary.LittleEndian.PutUint16(dirStream[i*2:], r)
     }
     dirStream[66] = 5
-    binary.LittleEndian.PutInt32(dirStream[76:], 1)
+    binary.LittleEndian.PutUint32(dirStream[76:], uint32(1)) // Child ID
     // Entry 1: WordDocument
     wdName := strToUtf16("WordDocument")
     for i, r := range wdName {
@@ -59,7 +60,7 @@ func createMockDocFile(t *testing.T) []byte {
     }
     dirStream[128+66] = 2
     binary.LittleEndian.PutUint16(dirStream[128+64:], uint16(len(wdName)*2))
-    binary.LittleEndian.PutInt32(dirStream[128+116:], 2) // Starts at sector 2
+    binary.LittleEndian.PutUint32(dirStream[128+116:], uint32(2)) // Starts at sector 2
     binary.LittleEndian.PutUint64(dirStream[128+120:], uint64(sectorSize+len(utf16Bytes)))
     // Entry 2: 0Table
     tableName := strToUtf16("0Table")
@@ -68,7 +69,7 @@ func createMockDocFile(t *testing.T) []byte {
     }
     dirStream[256+66] = 2
     binary.LittleEndian.PutUint16(dirStream[256+64:], uint16(len(tableName)*2))
-    binary.LittleEndian.PutInt32(dirStream[256+116:], 3) // Starts at sector 3
+    binary.LittleEndian.PutUint32(dirStream[256+116:], uint32(3)) // Starts at sector 3
     binary.LittleEndian.PutUint64(dirStream[256+120:], 512)
     buf.Write(dirStream)
 
