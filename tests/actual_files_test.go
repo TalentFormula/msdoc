@@ -13,8 +13,8 @@ func TestActualDocFiles(t *testing.T) {
 		filename string
 		desc     string
 	}{
-		{"tests/testdata/sample-1.doc", "Sample 1 - Test document"},
-		{"tests/testdata/sample-2.doc", "Sample 2 - Test document"},
+		{"testdata/sample-1.doc", "Sample 1 - Test document"},
+		{"testdata/sample-2.doc", "Sample 2 - Test document"},
 	}
 
 	for _, tc := range testCases {
