@@ -15,8 +15,11 @@ import (
 // from potentially fragmented pieces stored throughout the file. It handles both
 // ANSI and Unicode text encoding as specified in the MS-DOC format.
 //
+// For encrypted documents, this method will decrypt the content if a password
+// was provided during opening.
+//
 // Returns an error if:
-//   - The document is encrypted (encryption support not yet implemented)
+//   - The document is encrypted but no password was provided or decryption failed
 //   - The piece table is corrupted or invalid
 //   - Required streams (WordDocument, Table) cannot be read
 //   - Text data extends beyond stream boundaries
@@ -25,9 +28,17 @@ import (
 func (d *Document) Text() (string, error) {
 	// Check if document is encrypted
 	if d.fib.IsEncrypted() {
-		return "", fmt.Errorf("text extraction from encrypted documents is not yet supported")
+		if d.decryptor == nil {
+			return "", fmt.Errorf("document is encrypted but no decryption cipher available")
+		}
+		return d.extractEncryptedText()
 	}
 
+	return d.extractUnencryptedText()
+}
+
+// extractUnencryptedText extracts text from unencrypted documents.
+func (d *Document) extractUnencryptedText() (string, error) {
 	// Get the appropriate table stream
 	tableStreamName := d.fib.GetTableStreamName()
 	tableStream, err := d.reader.ReadStream(tableStreamName)
@@ -67,6 +78,64 @@ func (d *Document) Text() (string, error) {
 		return "", fmt.Errorf("failed to read WordDocument stream: %w", err)
 	}
 
+	return d.extractTextFromPieces(plcPcd, wordStream, false)
+}
+
+// extractEncryptedText extracts text from encrypted documents.
+func (d *Document) extractEncryptedText() (string, error) {
+	// Get the appropriate table stream
+	tableStreamName := d.fib.GetTableStreamName()
+	tableStream, err := d.reader.ReadStream(tableStreamName)
+	if err != nil {
+		return "", fmt.Errorf("failed to read table stream %s: %w", tableStreamName, err)
+	}
+
+	// Skip encryption header and get piece table
+	encHeaderSize := uint32(116) // Standard encryption header size
+	if uint32(len(tableStream)) < encHeaderSize {
+		return "", fmt.Errorf("table stream too small for encryption header")
+	}
+
+	// Get the piece table location from FIB (adjusted for encryption header)
+	clxOffset := d.fib.RgFcLcb.FcClx + encHeaderSize
+	clxSize := d.fib.RgFcLcb.LcbClx
+
+	if clxSize == 0 {
+		return "", nil // No text content
+	}
+
+	if uint32(len(tableStream)) < clxOffset+clxSize {
+		return "", fmt.Errorf("table stream too small for CLX data")
+	}
+
+	clx := tableStream[clxOffset : clxOffset+clxSize]
+
+	// Decrypt the CLX data
+	decryptedCLX := d.decryptor.Decrypt(clx)
+
+	// The CLX should start with a PlcPcd indicator (0x02)
+	if len(decryptedCLX) == 0 || decryptedCLX[0] != 0x02 {
+		return "", fmt.Errorf("invalid CLX structure after decryption, expected PlcPcd marker")
+	}
+
+	// Parse the piece table
+	plcPcdData := decryptedCLX[1:] // Skip the marker byte
+	plcPcd, err := structures.ParsePlcPcd(plcPcdData)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse encrypted piece table: %w", err)
+	}
+
+	// Get the WordDocument stream for text content
+	wordStream, err := d.reader.ReadStream("WordDocument")
+	if err != nil {
+		return "", fmt.Errorf("failed to read WordDocument stream: %w", err)
+	}
+
+	return d.extractTextFromPieces(plcPcd, wordStream, true)
+}
+
+// extractTextFromPieces extracts text from piece descriptors.
+func (d *Document) extractTextFromPieces(plcPcd *structures.PlcPcd, wordStream []byte, isEncrypted bool) (string, error) {
 	// Extract text from each piece
 	var textBuilder bytes.Buffer
 
@@ -93,6 +162,11 @@ func (d *Document) Text() (string, error) {
 
 			utf16bytes := wordStream[filePos : filePos+byteCount]
 			
+			// Decrypt if necessary
+			if isEncrypted && !pcd.FNoEncryption {
+				utf16bytes = d.decryptor.Decrypt(utf16bytes)
+			}
+			
 			// Convert UTF-16LE to Go string
 			u16s := make([]uint16, charCount)
 			for j := uint32(0); j < charCount; j++ {
@@ -109,6 +183,12 @@ func (d *Document) Text() (string, error) {
 			}
 
 			ansiBytes := wordStream[filePos : filePos+charCount]
+			
+			// Decrypt if necessary
+			if isEncrypted && !pcd.FNoEncryption {
+				ansiBytes = d.decryptor.Decrypt(ansiBytes)
+			}
+			
 			// For basic ASCII/CP-1252, direct conversion works for most characters
 			// A complete implementation would use proper character encoding conversion
 			textBuilder.Write(ansiBytes)
@@ -118,45 +198,27 @@ func (d *Document) Text() (string, error) {
 	return textBuilder.String(), nil
 }
 
-// Metadata extracts high-level metadata from the document.
+// Metadata extracts comprehensive metadata from the document.
 //
-// This method attempts to parse the OLE SummaryInformation stream to extract
-// document properties such as title, author, and creation date. If the stream
-// is not available or cannot be parsed, default values are returned.
+// This method parses both the SummaryInformation and DocumentSummaryInformation
+// streams to extract document properties such as title, author, creation date,
+// company, manager, and many other standard and custom properties.
 //
-// The current implementation provides basic metadata extraction. A complete
-// implementation would fully parse the property set stream format and handle
-// all standard document properties defined in the OLE specification.
+// The current implementation provides complete metadata extraction including
+// all standard OLE property types and custom properties.
 //
 // Returns a Metadata structure with available information, never returns an error.
-func (d *Document) Metadata() Metadata {
-	// Try to parse summary information stream
-	summaryData, err := d.reader.ReadStream("\x05SummaryInformation")
+func (d *Document) Metadata() *Metadata {
+	// Extract comprehensive metadata
+	metadata, err := d.metadataExtractor.ExtractMetadata()
 	if err != nil {
-		// Return basic metadata from FIB if SummaryInformation is not available
-		return Metadata{
+		// Return basic metadata from FIB if extraction fails
+		return &Metadata{
 			Title:   "N/A",
 			Author:  "N/A",
 			Created: time.Time{},
 		}
 	}
 
-	// Parse summary information (basic implementation)
-	return parseSummaryInformation(summaryData)
-}
-
-// parseSummaryInformation extracts metadata from the SummaryInformation stream.
-// This is a simplified implementation that handles the most common fields.
-func parseSummaryInformation(data []byte) Metadata {
-	// This is a stub implementation. A complete parser would handle:
-	// - Property set stream format
-	// - Property identifiers for title, author, creation time, etc.
-	// - Different data types (strings, timestamps, etc.)
-	
-	// For now, return placeholder values
-	return Metadata{
-		Title:   "N/A", // Would extract from PID_TITLE (0x02)
-		Author:  "N/A", // Would extract from PID_AUTHOR (0x04)
-		Created: time.Time{}, // Would extract from PID_CREATE_DTM (0x0C)
-	}
+	return metadata
 }
