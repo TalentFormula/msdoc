@@ -2,15 +2,15 @@ package tests
 
 import (
 	"encoding/binary"
-	"testing"
-
 	"github.com/TalentFormula/msdoc/fib"
+	"testing"
 )
 
 func TestParseFIB(t *testing.T) {
 	// Create a mock FIB structure. Size must be large enough to contain
 	// all the parts up to the cbRgFcLcb field.
-	fibBytes := make([]byte, 32+2+28+2+88+2+93*8) // Base + counts + blobs
+	blobSizeInBytes := 93 * 8
+	fibBytes := make([]byte, 32+2+28+2+88+2+blobSizeInBytes) // Base + counts + blobs
 
 	// --- Populate FibBase (first 32 bytes) ---
 	wIdent := uint16(0xA5EC)
@@ -32,16 +32,14 @@ func TestParseFIB(t *testing.T) {
 	binary.LittleEndian.PutUint16(fibBytes[offset:], cslw)
 	offset += 2 + 88 // Skip over fibRgLw
 	binary.LittleEndian.PutUint16(fibBytes[offset:], cbRgFcLcb)
-	offset += 2
+	offset += 2 // Offset is now at the start of the blob
 
 	// --- Populate key values in RgFcLcbBlob ---
-	// According to spec for nFib=0x00C1, fcClx/lcbClx are at offsets 0x1A2/0x1A6
-	// relative to the start of the WordDocument stream. The blob starts at offset 0x5A.
-	// So, the offset within the blob is 0x1A2 - 0x5A = 0x148 = 328.
-	// We'll use a simpler offset for this test since the code just uses the constant.
-	fcClxOffsetInBlob := 248
-	fcClx := uint32(0x1000)
-	lcbClx := uint32(0x0200)
+	// For Word 97 (nFib=0x00C1), fcClx/lcbClx are at offset 264 within the blob.
+	// THIS IS THE CORRECTED VALUE.
+	fcClxOffsetInBlob := 264
+	fcClx := uint32(4096)
+	lcbClx := uint32(512)
 	binary.LittleEndian.PutUint32(fibBytes[offset+fcClxOffsetInBlob:], fcClx)
 	binary.LittleEndian.PutUint32(fibBytes[offset+fcClxOffsetInBlob+4:], lcbClx)
 
