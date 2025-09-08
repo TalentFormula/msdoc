@@ -58,7 +58,6 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 		NumDIFATSectors   uint32
 	}
 
-	// The header is 76 bytes long.
 	headerBytes := make([]byte, 76)
 	if _, err := r.ReadAt(headerBytes, 0); err != nil {
 		return nil, fmt.Errorf("ole2: failed to read header: %w", err)
@@ -72,7 +71,6 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 		return nil, errors.New("ole2: invalid signature")
 	}
 
-	// Read DIFAT (starts at offset 76 in the header sector)
 	difatBytes := make([]byte, 436)
 	if _, err := r.ReadAt(difatBytes, 76); err != nil {
 		return nil, fmt.Errorf("ole2: failed to read DIFAT: %w", err)
@@ -83,7 +81,6 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 		return nil, err
 	}
 
-	// Read FAT sectors
 	var fatSectors []byte
 	for _, secNum := range difat {
 		if secNum >= 0 {
@@ -101,7 +98,6 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 		return nil, err
 	}
 
-	// Read directory stream
 	var dirStream []byte
 	sectorNum := header.DirStartSector
 	for sectorNum >= 0 && sectorNum < int32(len(fat)) {
@@ -140,7 +136,6 @@ func (r *Reader) ReadStream(name string) ([]byte, error) {
 					streamData = append(streamData, sector...)
 					sectorNum = int32(r.fat[sectorNum])
 				}
-				// Trim to actual size
 				if entry.StreamSize > uint64(len(streamData)) {
 					return nil, fmt.Errorf("ole2: stream '%s' is truncated, expected %d bytes, got %d", name, entry.StreamSize, len(streamData))
 				}
@@ -151,17 +146,22 @@ func (r *Reader) ReadStream(name string) ([]byte, error) {
 	return nil, fmt.Errorf("ole2: stream '%s' not found", name)
 }
 
-// utf16BytesToString converts a UTF-16 byte sequence from a directory entry to a Go string.
+// utf16BytesToString converts a UTF-16 name from a directory entry to a Go string.
+// THIS IS THE NEW, ROBUST IMPLEMENTATION.
 func utf16BytesToString(name [32]uint16, nameLen uint16) string {
-	// nameLen is in bytes. If it's less than 2, it's an empty name.
 	if nameLen < 2 {
 		return ""
 	}
-	// The length includes a null terminator, so we subtract it from the character count.
-	numChars := (nameLen / 2) - 1
-	if numChars > 32 { // Sanity check
-		numChars = 32
+
+	// Find the null terminator, respecting the specified length.
+	end := 0
+	maxChars := int(nameLen / 2)
+	for end < maxChars && end < len(name) {
+		if name[end] == 0 {
+			break
+		}
+		end++
 	}
-	runes := utf16.Decode(name[:numChars])
-	return string(runes)
+
+	return string(utf16.Decode(name[:end]))
 }
