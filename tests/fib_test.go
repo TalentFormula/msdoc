@@ -10,7 +10,7 @@ func TestParseFIB(t *testing.T) {
 	// Create a mock FIB structure. Size must be large enough to contain
 	// all the parts up to the cbRgFcLcb field.
 	blobSizeInBytes := 93 * 8
-	fibBytes := make([]byte, 32+2+28+2+88+2+blobSizeInBytes) // Base + counts + blobs
+	fibBytes := make([]byte, 32+2+28+2+80+2+blobSizeInBytes) // Base + counts + blobs (using binary.Read sizes)
 
 	// --- Populate FibBase (first 32 bytes) ---
 	wIdent := uint16(0xA5EC)
@@ -26,12 +26,12 @@ func TestParseFIB(t *testing.T) {
 	cslw := uint16(22)      // Size of fibRgLw in uint32
 	cbRgFcLcb := uint16(93) // Corresponds to nFib 0x00C1 (0x5D)
 
-	offset := 32
+	offset := 32 // FibBase size when packed
 	binary.LittleEndian.PutUint16(fibBytes[offset:], csw)
-	offset += 2 + 28 // Skip over fibRgW
+	offset += 2 + 28 // Skip over fibRgW  
 	binary.LittleEndian.PutUint16(fibBytes[offset:], cslw)
-	offset += 2 + 88 // Skip over fibRgLw
-	binary.LittleEndian.PutUint16(fibBytes[offset:], cbRgFcLcb)
+	offset += 2 + 80 // Skip over fibRgLw (actual binary.Read size is 80, not 88)
+	binary.LittleEndian.PutUint16(fibBytes[offset:], cbRgFcLcb)  
 	offset += 2 // Offset is now at the start of the blob
 
 	// --- Populate key values in RgFcLcbBlob ---

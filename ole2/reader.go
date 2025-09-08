@@ -112,8 +112,27 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 
 	numDirs := len(dirStream) / dirEntrySize
 	dirEntries := make([]dirEntry, numDirs)
-	if err := binary.Read(bytes.NewReader(dirStream), binary.LittleEndian, &dirEntries); err != nil {
-		return nil, err
+	
+	// Manual parsing instead of binary.Read to avoid potential alignment issues
+	for i := 0; i < numDirs && i*dirEntrySize < len(dirStream); i++ {
+		entryData := dirStream[i*dirEntrySize:(i+1)*dirEntrySize]
+		
+		// Parse the name (first 64 bytes as UTF-16)
+		for j := 0; j < 32; j++ {
+			dirEntries[i].Name[j] = binary.LittleEndian.Uint16(entryData[j*2:(j+1)*2])
+		}
+		dirEntries[i].NameLen = binary.LittleEndian.Uint16(entryData[64:66])
+		dirEntries[i].ObjectType = entryData[66]
+		dirEntries[i].ColorFlag = entryData[67]
+		dirEntries[i].LeftSibling = int32(binary.LittleEndian.Uint32(entryData[68:72]))
+		dirEntries[i].RightSibling = int32(binary.LittleEndian.Uint32(entryData[72:76]))
+		dirEntries[i].ChildID = int32(binary.LittleEndian.Uint32(entryData[76:80]))
+		copy(dirEntries[i].CLSID[:], entryData[80:96])
+		dirEntries[i].StateBits = binary.LittleEndian.Uint32(entryData[96:100])
+		dirEntries[i].CreationTime = binary.LittleEndian.Uint64(entryData[100:108])
+		dirEntries[i].ModifiedTime = binary.LittleEndian.Uint64(entryData[108:116])
+		dirEntries[i].StartingSector = int32(binary.LittleEndian.Uint32(entryData[116:120]))
+		dirEntries[i].StreamSize = binary.LittleEndian.Uint64(entryData[120:128])
 	}
 
 	return &Reader{r, fat, dirEntries}, nil
