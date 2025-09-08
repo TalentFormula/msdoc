@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"encoding/binary"
+	"os"
 	"testing"
 	"unicode/utf16"
 
@@ -23,7 +24,7 @@ func TestOLE2Reader(t *testing.T) {
 	header := make([]byte, 76)
 	binary.LittleEndian.PutUint64(header[0:], 0xE11AB1A1E011CFD0) // Signature
 	binary.LittleEndian.PutUint16(header[28:], 0x0009)            // Sector Shift (512 bytes)
-	binary.LittleEndian.PutUint32(header[46:], 1)                 // Directory Start Sector (correct offset)
+	binary.LittleEndian.PutUint32(header[48:], 1)                 // Directory Start Sector (correct offset per OLE2 spec)
 	buf.Write(header)
 
 	// 2. DIFAT (rest of the first sector)
@@ -75,6 +76,16 @@ func TestOLE2Reader(t *testing.T) {
 		t.Fatalf("NewReader failed: %v", err)
 	}
 
+	// Test ListStreams functionality
+	streams := oleReader.ListStreams()
+	if len(streams) != 1 {
+		t.Errorf("Expected 1 stream, got %d", len(streams))
+	}
+	if len(streams) > 0 && streams[0] != "MyStream" {
+		t.Errorf("Expected stream 'MyStream', got '%s'", streams[0])
+	}
+
+	// Test ReadStream functionality
 	data, err := oleReader.ReadStream("MyStream")
 	if err != nil {
 		t.Fatalf("ReadStream failed: %v", err)
@@ -87,5 +98,70 @@ func TestOLE2Reader(t *testing.T) {
 	expected := "Hello OLE2!"
 	if string(data[:11]) != expected {
 		t.Errorf("Expected stream content '%s', got '%s'", expected, string(data))
+	}
+}
+
+func TestOLE2RealWordDocs(t *testing.T) {
+	// Test with sample-1.doc
+	file1, err := os.Open("testdata/sample-1.doc")
+	if err != nil {
+		t.Fatalf("Failed to open sample-1.doc: %v", err)
+	}
+	defer file1.Close()
+
+	reader1, err := ole2.NewReader(file1)
+	if err != nil {
+		t.Fatalf("Failed to create OLE2 reader for sample-1.doc: %v", err)
+	}
+
+	streams1 := reader1.ListStreams()
+	if len(streams1) == 0 {
+		t.Errorf("Expected streams in sample-1.doc, but got none")
+	}
+
+	// Check for expected Word document streams
+	expectedStreams := []string{"WordDocument", "1Table"}
+	for _, expectedStream := range expectedStreams {
+		found := false
+		for _, stream := range streams1 {
+			if stream == expectedStream {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected stream '%s' not found in sample-1.doc. Found streams: %v", expectedStream, streams1)
+		}
+	}
+
+	// Test with sample-2.doc
+	file2, err := os.Open("testdata/sample-2.doc")
+	if err != nil {
+		t.Fatalf("Failed to open sample-2.doc: %v", err)
+	}
+	defer file2.Close()
+
+	reader2, err := ole2.NewReader(file2)
+	if err != nil {
+		t.Fatalf("Failed to create OLE2 reader for sample-2.doc: %v", err)
+	}
+
+	streams2 := reader2.ListStreams()
+	if len(streams2) == 0 {
+		t.Errorf("Expected streams in sample-2.doc, but got none")
+	}
+
+	// Check for expected Word document streams
+	for _, expectedStream := range expectedStreams {
+		found := false
+		for _, stream := range streams2 {
+			if stream == expectedStream {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected stream '%s' not found in sample-2.doc. Found streams: %v", expectedStream, streams2)
+		}
 	}
 }
