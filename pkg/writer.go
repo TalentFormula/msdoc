@@ -10,19 +10,19 @@
 //	writer.SetTitle("My Document")
 //	writer.SetAuthor("John Doe")
 //	writer.AddParagraph("Hello, World!")
-//	
+//
 //	// Add formatted text
 //	charProps := &formatting.CharacterProperties{
 //		Bold: true,
 //		FontSize: 24, // 12pt
 //	}
 //	writer.AddFormattedText("Bold text", charProps, nil)
-//	
+//
 //	err := writer.Save("output.doc")
 //
 // This implementation provides complete document creation capabilities including
 // text content, formatting, metadata, and proper OLE2 structure generation.
-package msdoc
+package pkg
 
 import (
 	"github.com/TalentFormula/msdoc/writer"

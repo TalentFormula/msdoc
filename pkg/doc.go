@@ -38,7 +38,7 @@
 //	writer.SetAuthor("John Doe")
 //	writer.AddParagraph("Hello, World!")
 //	err := writer.Save("output.doc")
-package msdoc
+package pkg
 
 import (
 	"fmt"
@@ -61,13 +61,13 @@ type Document struct {
 	file      *os.File
 	reader    *ole2.Reader
 	fib       *fib.FileInformationBlock
-	password  string // For encrypted documents
+	password  string      // For encrypted documents
 	decryptor *crypto.RC4 // For encrypted documents
-	
+
 	// Lazy-loaded components
-	objectPool    *objects.ObjectPool
-	macroExtractor *macros.MacroExtractor
-	metadataExtractor *metadata.MetadataExtractor
+	objectPool          *objects.ObjectPool
+	macroExtractor      *macros.MacroExtractor
+	metadataExtractor   *metadata.MetadataExtractor
 	formattingExtractor *formatting.FormattingExtractor
 }
 
