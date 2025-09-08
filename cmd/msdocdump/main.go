@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/TalentFormula/msdoc/pkg/msdoc"
 	"log"
 	"os"
+
+	"github.com/TalentFormula/msdoc/pkg"
 )
 
 func main() {
@@ -15,7 +16,7 @@ func main() {
 	filename := os.Args[1]
 
 	// Open the .doc file using our library
-	doc, err := msdoc.Open(filename)
+	doc, err := pkg.Open(filename)
 	if err != nil {
 		log.Fatalf("failed to open DOC: %v", err)
 	}
