@@ -16,7 +16,7 @@ func main() {
 	filename := os.Args[1]
 
 	// Open the .doc file using our library
-	doc, err := pkg.Open(filename)
+	doc, err := msdoc.Open(filename)
 	if err != nil {
 		log.Fatalf("failed to open DOC: %v", err)
 	}
