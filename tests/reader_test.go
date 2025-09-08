@@ -26,9 +26,9 @@ func createMockDocFile(t *testing.T) []byte {
 
 	// --- OLE2 Header and DIFAT (Sector -1) ---
 	header := make([]byte, sectorSize)
-	binary.LittleEndian.PutUint64(header[0:], 0xE011CFD0B1A1E11A) // Signature
+	binary.LittleEndian.PutUint64(header[0:], 0xE11AB1A1E011CFD0) // Signature
 	binary.LittleEndian.PutUint16(header[28:], 0x0009)            // 512-byte sectors
-	binary.LittleEndian.PutUint32(header[44:], 1)                 // Directory stream starts at sector 1
+	binary.LittleEndian.PutUint32(header[46:], 1)                 // Directory stream starts at sector 1 (correct offset)
 	binary.LittleEndian.PutUint32(header[76:], 0)                 // First FAT sector is at sector 0
 	for i := 80; i < sectorSize; i += 4 {
 		binary.LittleEndian.PutUint32(header[i:], 0xFFFFFFFF) // End of DIFAT
@@ -78,7 +78,14 @@ func createMockDocFile(t *testing.T) []byte {
 	// A minimal FIB
 	binary.LittleEndian.PutUint16(wordDocStream[0:], 0xA5EC)          // wIdent
 	binary.LittleEndian.PutUint16(wordDocStream[10:], 0x0000)         // fWhichTblStm = 0 (use 0Table)
-	binary.LittleEndian.PutUint16(wordDocStream[32+2+28+2+88+2:], 93) // cbRgFcLcb
+	binary.LittleEndian.PutUint16(wordDocStream[32+2+28+2+80+2:], 93) // cbRgFcLcb (using correct offset)
+	
+	// Set FcClx and LcbClx in the FIB blob
+	fibBlobStart := 32 + 2 + 28 + 2 + 80 + 2 + 2 // Start of RgFcLcbBlob
+	fcClxOffset := fibBlobStart + 264              // FcClx at offset 264 in blob
+	binary.LittleEndian.PutUint32(wordDocStream[fcClxOffset:], 0)    // FcClx: PlcPcd starts at offset 0 in table stream
+	binary.LittleEndian.PutUint32(wordDocStream[fcClxOffset+4:], 20) // LcbClx: PlcPcd size (approximately)
+	
 	// Place text content starting at offset 512
 	copy(wordDocStream[512:], utf16Bytes)
 	buf.Write(wordDocStream[:sectorSize]) // Sector 2

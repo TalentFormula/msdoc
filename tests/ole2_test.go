@@ -21,9 +21,9 @@ func TestOLE2Reader(t *testing.T) {
 
 	// 1. OLE2 Header (76 bytes)
 	header := make([]byte, 76)
-	binary.LittleEndian.PutUint64(header[0:], 0xE011CFD0B1A1E11A) // Signature
+	binary.LittleEndian.PutUint64(header[0:], 0xE11AB1A1E011CFD0) // Signature
 	binary.LittleEndian.PutUint16(header[28:], 0x0009)            // Sector Shift (512 bytes)
-	binary.LittleEndian.PutUint32(header[44:], 1)                 // Directory Start Sector
+	binary.LittleEndian.PutUint32(header[46:], 1)                 // Directory Start Sector (correct offset)
 	buf.Write(header)
 
 	// 2. DIFAT (rest of the first sector)
