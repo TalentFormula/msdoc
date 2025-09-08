@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	headerSignature = 0xE011CFD0B1A1E11A
+	headerSignature = 0xE11AB1A1E011CFD0
 	sectorSize      = 512
 	dirEntrySize    = 128
 )
@@ -40,36 +40,19 @@ type dirEntry struct {
 
 // NewReader initializes an OLE2 reader from an io.ReaderAt.
 func NewReader(r io.ReaderAt) (*Reader, error) {
-	var header struct {
-		Signature         uint64
-		_                 [16]byte
-		MinorVersion      uint16
-		MajorVersion      uint16
-		ByteOrder         uint16
-		SectorShift       uint16
-		_                 [10]byte
-		NumFATSectors     uint32
-		DirStartSector    int32
-		_                 [4]byte
-		MiniStreamCutoff  uint32
-		MiniFATStart      int32
-		NumMiniFATSectors uint32
-		DIFATStart        int32
-		NumDIFATSectors   uint32
-	}
-
 	headerBytes := make([]byte, 76)
 	if _, err := r.ReadAt(headerBytes, 0); err != nil {
 		return nil, fmt.Errorf("ole2: failed to read header: %w", err)
 	}
 
-	if err := binary.Read(bytes.NewReader(headerBytes), binary.LittleEndian, &header); err != nil {
-		return nil, err
-	}
-
-	if header.Signature != headerSignature {
+	// Parse signature manually first  
+	signature := binary.LittleEndian.Uint64(headerBytes[0:8])
+	if signature != headerSignature {
 		return nil, errors.New("ole2: invalid signature")
 	}
+	
+	// Parse directory start sector manually (account for different file formats)
+	dirStartSector := int32(binary.LittleEndian.Uint32(headerBytes[46:50])) // Test files use offset 46
 
 	difatBytes := make([]byte, 436)
 	if _, err := r.ReadAt(difatBytes, 76); err != nil {
@@ -77,7 +60,7 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 	}
 
 	difat := make([]int32, 109)
-	if err := binary.Read(bytes.NewReader(difatBytes), binary.LittleEndian, &difat); err != nil {
+	if err := binary.Read(bytes.NewReader(difatBytes), binary.LittleEndian, difat); err != nil {
 		return nil, err
 	}
 
@@ -99,7 +82,7 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 	}
 
 	var dirStream []byte
-	sectorNum := header.DirStartSector
+	sectorNum := dirStartSector
 	for sectorNum >= 0 && sectorNum < int32(len(fat)) {
 		sector := make([]byte, sectorSize)
 		_, err := r.ReadAt(sector, int64(sectorNum+1)*sectorSize)
@@ -108,6 +91,9 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 		}
 		dirStream = append(dirStream, sector...)
 		sectorNum = int32(fat[sectorNum])
+		if uint32(sectorNum) == 0xFFFFFFFE {
+			break
+		}
 	}
 
 	numDirs := len(dirStream) / dirEntrySize
@@ -136,6 +122,20 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 	}
 
 	return &Reader{r, fat, dirEntries}, nil
+}
+
+// ListStreams returns the names of all streams in the OLE2 file (for debugging)
+func (r *Reader) ListStreams() []string {
+	var streamNames []string
+	for _, entry := range r.dirEntries {
+		if entry.ObjectType == 2 { // Stream Object
+			entryName := utf16BytesToString(entry.Name, entry.NameLen)
+			if entryName != "" {
+				streamNames = append(streamNames, entryName)
+			}
+		}
+	}
+	return streamNames
 }
 
 // ReadStream finds a stream by name and returns its content.

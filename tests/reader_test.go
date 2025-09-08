@@ -26,7 +26,7 @@ func createMockDocFile(t *testing.T) []byte {
 
 	// --- OLE2 Header and DIFAT (Sector -1) ---
 	header := make([]byte, sectorSize)
-	binary.LittleEndian.PutUint64(header[0:], 0xE011CFD0B1A1E11A) // Signature
+	binary.LittleEndian.PutUint64(header[0:], 0xE11AB1A1E011CFD0) // Signature
 	binary.LittleEndian.PutUint16(header[28:], 0x0009)            // 512-byte sectors
 	binary.LittleEndian.PutUint32(header[46:], 1)                 // Directory stream starts at sector 1 (correct offset)
 	binary.LittleEndian.PutUint32(header[76:], 0)                 // First FAT sector is at sector 0
