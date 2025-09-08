@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/TalentFormula/msdoc/pkg/msdoc"
+	"github.com/TalentFormula/msdoc/pkg"
 )
 
 // TestActualDocFiles tests the library against actual .doc files in the testdata directory.

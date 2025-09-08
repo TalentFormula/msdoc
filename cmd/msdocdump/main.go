@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/TalentFormula/msdoc/pkg/msdoc"
 	"log"
 	"os"
+
+	"github.com/TalentFormula/msdoc/pkg"
 )
 
 func main() {
