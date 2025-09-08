@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"unicode/utf16"
 )
 
@@ -45,12 +46,12 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 		return nil, fmt.Errorf("ole2: failed to read header: %w", err)
 	}
 
-	// Parse signature manually first  
+	// Parse signature manually first
 	signature := binary.LittleEndian.Uint64(headerBytes[0:8])
 	if signature != headerSignature {
 		return nil, errors.New("ole2: invalid signature")
 	}
-	
+
 	// Parse directory start sector manually (account for different file formats)
 	dirStartSector := int32(binary.LittleEndian.Uint32(headerBytes[46:50])) // Test files use offset 46
 
@@ -98,14 +99,14 @@ func NewReader(r io.ReaderAt) (*Reader, error) {
 
 	numDirs := len(dirStream) / dirEntrySize
 	dirEntries := make([]dirEntry, numDirs)
-	
+
 	// Manual parsing instead of binary.Read to avoid potential alignment issues
 	for i := 0; i < numDirs && i*dirEntrySize < len(dirStream); i++ {
-		entryData := dirStream[i*dirEntrySize:(i+1)*dirEntrySize]
-		
+		entryData := dirStream[i*dirEntrySize : (i+1)*dirEntrySize]
+
 		// Parse the name (first 64 bytes as UTF-16)
 		for j := 0; j < 32; j++ {
-			dirEntries[i].Name[j] = binary.LittleEndian.Uint16(entryData[j*2:(j+1)*2])
+			dirEntries[i].Name[j] = binary.LittleEndian.Uint16(entryData[j*2 : (j+1)*2])
 		}
 		dirEntries[i].NameLen = binary.LittleEndian.Uint16(entryData[64:66])
 		dirEntries[i].ObjectType = entryData[66]
@@ -143,7 +144,8 @@ func (r *Reader) ReadStream(name string) ([]byte, error) {
 	for _, entry := range r.dirEntries {
 		if entry.ObjectType == 2 { // Stream Object
 			entryName := utf16BytesToString(entry.Name, entry.NameLen)
-			if entryName == name {
+			// Trim spaces for robust comparison
+			if strings.TrimSpace(entryName) == strings.TrimSpace(name) {
 				var streamData []byte
 				sectorNum := entry.StartingSector
 				for sectorNum >= 0 && sectorNum < int32(len(r.fat)) {
