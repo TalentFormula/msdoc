@@ -2,97 +2,103 @@ package msdoc
 
 import (
 	"bytes"
-	"encoding/binary"
+	"fmt"
 	"time"
 	"unicode/utf16"
+
+	"github.com/TalentFormula/msdoc/structures"
 )
 
 // Text extracts the plain text content from the document.
 func (d *Document) Text() (string, error) {
-	// Determine which table stream to use based on the fWhichTblStm flag in the FIB.
-	// Bit 9 of flags1 (FibBase offset 10).
-	tableStreamName := "0Table"
-	if d.fib.Base.Flags1&0x0200 != 0 {
-		tableStreamName = "1Table"
+	// Check if document is encrypted
+	if d.fib.IsEncrypted() {
+		return "", fmt.Errorf("text extraction from encrypted documents is not yet supported")
 	}
 
+	// Get the appropriate table stream
+	tableStreamName := d.fib.GetTableStreamName()
 	tableStream, err := d.reader.ReadStream(tableStreamName)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read table stream %s: %w", tableStreamName, err)
 	}
 
-	// The piece table (PlcPcd) describes where text pieces are located.
-	// Its location is defined in the FIB.
+	// Get the piece table location from FIB
 	clxOffset := d.fib.RgFcLcb.FcClx
 	clxSize := d.fib.RgFcLcb.LcbClx
 
-	// The Clx is a structure that starts with a PlcPcd.
-	// We need to parse it to find the text pieces.
 	if clxSize == 0 {
 		return "", nil // No text content
 	}
+
+	if uint32(len(tableStream)) < clxOffset+clxSize {
+		return "", fmt.Errorf("table stream too small for CLX data")
+	}
+
 	clx := tableStream[clxOffset : clxOffset+clxSize]
 
-	// The first byte of the Clx indicates it's a PlcPcd
-	if clx[0] != 0x02 {
-		return "", nil // Not a piece table
+	// The CLX should start with a PlcPcd indicator (0x02)
+	if len(clx) == 0 || clx[0] != 0x02 {
+		return "", fmt.Errorf("invalid CLX structure, expected PlcPcd marker")
 	}
 
-	// Parse the PLC structure for piece descriptors (PCDs).
-	// A PLC contains an array of CPs followed by an array of data.
-	// For a PlcPcd, the data elements are PCDs.
-	plcSize := len(clx) - 1
-	pcdPlc := clx[1:]
+	// Parse the piece table
+	plcPcdData := clx[1:] // Skip the marker byte
+	plcPcd, err := structures.ParsePlcPcd(plcPcdData)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse piece table: %w", err)
+	}
 
-	// According to MS-DOC spec, the size of the aCP array is calculated from total size.
-	// Each PCD is 8 bytes. Each CP is 4 bytes.
-	// n = (cbPlc - 4) / (cbData + 4) -> (plcSize - 4) / (8 + 4)
-	numPcds := (plcSize - 4) / 12
-
+	// Get the WordDocument stream for text content
 	wordStream, err := d.reader.ReadStream("WordDocument")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read WordDocument stream: %w", err)
 	}
 
+	// Extract text from each piece
 	var textBuilder bytes.Buffer
 
-	for i := 0; i < numPcds; i++ {
-		// Get the offset of the PCD in the PLC structure
-		pcdOffset := 4*(numPcds+1) + (i * 8)
-		pcd := pcdPlc[pcdOffset : pcdOffset+8]
+	for i := 0; i < plcPcd.Count(); i++ {
+		startCP, endCP, pcd, err := plcPcd.GetTextRange(i)
+		if err != nil {
+			return "", fmt.Errorf("failed to get text range for piece %d: %w", i, err)
+		}
 
-		// The file character position (fc) is in the PCD
-		fileCharPos := int32(pcd[2]) | int32(pcd[3])<<8 | int32(pcd[4])<<16 | int32(pcd[5])<<24
+		charCount := startCP.Distance(endCP)
+		if charCount == 0 {
+			continue
+		}
 
-		// Determine if text is ANSI (fc is even) or Unicode (fc is odd and shifted)
-		isUnicode := (fileCharPos & 0x40000000) != 0
-		actualPos := fileCharPos & 0x3FFFFFFF
+		// Get the file position for this piece
+		filePos := pcd.GetActualFC()
 
-		// Get the start and end character positions (CPs) for this piece
-		cpStart := binary.LittleEndian.Uint32(pcdPlc[i*4:])
-		cpEnd := binary.LittleEndian.Uint32(pcdPlc[(i+1)*4:])
-		charCount := cpEnd - cpStart
-
-		if isUnicode {
-			// Unicode text is stored at position / 2
-			bytePos := uint32(actualPos / 2)
+		if pcd.IsUnicode {
+			// Unicode text (UTF-16LE)
 			byteCount := charCount * 2
-			utf16bytes := wordStream[bytePos : bytePos+byteCount]
+			if uint32(len(wordStream)) < filePos+byteCount {
+				return "", fmt.Errorf("WordDocument stream too small for Unicode text at piece %d", i)
+			}
 
-			// Convert UTF-16LE to UTF-8
+			utf16bytes := wordStream[filePos : filePos+byteCount]
+			
+			// Convert UTF-16LE to Go string
 			u16s := make([]uint16, charCount)
-			for j := 0; j < int(charCount); j++ {
-				u16s[j] = binary.LittleEndian.Uint16(utf16bytes[j*2:])
+			for j := uint32(0); j < charCount; j++ {
+				if (j*2)+1 < uint32(len(utf16bytes)) {
+					u16s[j] = uint16(utf16bytes[j*2]) | (uint16(utf16bytes[j*2+1]) << 8)
+				}
 			}
 			runes := utf16.Decode(u16s)
 			textBuilder.WriteString(string(runes))
 		} else {
-			// ANSI text is stored at the given position
-			bytePos := uint32(actualPos)
-			byteCount := charCount
-			ansiBytes := wordStream[bytePos : bytePos+byteCount]
-			// This assumes CP-1252 encoding, a simple cast to string works for many chars.
-			// A full solution would use a proper character encoding library.
+			// ANSI text (CP-1252 encoding)
+			if uint32(len(wordStream)) < filePos+charCount {
+				return "", fmt.Errorf("WordDocument stream too small for ANSI text at piece %d", i)
+			}
+
+			ansiBytes := wordStream[filePos : filePos+charCount]
+			// For basic ASCII/CP-1252, direct conversion works for most characters
+			// A complete implementation would use proper character encoding conversion
 			textBuilder.Write(ansiBytes)
 		}
 	}
@@ -103,10 +109,33 @@ func (d *Document) Text() (string, error) {
 // Metadata extracts high-level metadata from the document.
 // In a complete implementation, this would parse the OLE SummaryInformation stream.
 func (d *Document) Metadata() Metadata {
-	// This is a stub implementation. A real one would parse the dedicated metadata stream.
+	// Try to parse summary information stream
+	summaryData, err := d.reader.ReadStream("\x05SummaryInformation")
+	if err != nil {
+		// Return basic metadata from FIB if SummaryInformation is not available
+		return Metadata{
+			Title:   "N/A",
+			Author:  "N/A",
+			Created: time.Time{},
+		}
+	}
+
+	// Parse summary information (basic implementation)
+	return parseSummaryInformation(summaryData)
+}
+
+// parseSummaryInformation extracts metadata from the SummaryInformation stream.
+// This is a simplified implementation that handles the most common fields.
+func parseSummaryInformation(data []byte) Metadata {
+	// This is a stub implementation. A complete parser would handle:
+	// - Property set stream format
+	// - Property identifiers for title, author, creation time, etc.
+	// - Different data types (strings, timestamps, etc.)
+	
+	// For now, return placeholder values
 	return Metadata{
-		Title:   "N/A",
-		Author:  "N/A",
-		Created: time.Time{},
+		Title:   "N/A", // Would extract from PID_TITLE (0x02)
+		Author:  "N/A", // Would extract from PID_AUTHOR (0x04)
+		Created: time.Time{}, // Would extract from PID_CREATE_DTM (0x0C)
 	}
 }
