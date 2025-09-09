@@ -22,8 +22,8 @@ func main() {
 	}
 	defer doc.Close()
 
-	// Extract plain text
-	text, err := doc.Text()
+	// Extract text with markdown formatting (hyperlinks as [text](url))
+	text, err := doc.MarkdownText()
 	if err != nil {
 		log.Fatalf("failed to extract text: %v", err)
 	}

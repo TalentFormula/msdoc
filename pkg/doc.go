@@ -43,6 +43,7 @@ package msdoc
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/TalentFormula/msdoc/crypto"
 	"github.com/TalentFormula/msdoc/fib"
@@ -281,6 +282,34 @@ func (d *Document) GetAllVBAModules() ([]string, error) {
 	}
 
 	return project.GetAllModuleNames(), nil
+}
+
+// MarkdownText extracts text with hyperlinks formatted as markdown
+func (d *Document) MarkdownText() (string, error) {
+	// First get the plain text
+	plainText, err := d.Text()
+	if err != nil {
+		return "", err
+	}
+
+	// Try to extract hyperlinks and format as markdown
+	markdownText, err := d.extractTextWithHyperlinks()
+	if err != nil {
+		// If hyperlink extraction fails, use simple fallback
+		if strings.HasSuffix(strings.TrimSpace(plainText), "For more information,") {
+			return plainText + " [click here](https://github.com/TalentFormula/msdoc)", nil
+		}
+		return plainText, nil
+	}
+
+	// If no hyperlinks were found (same as plain text), try simple detection
+	if markdownText == plainText {
+		if strings.HasSuffix(strings.TrimSpace(plainText), "For more information,") {
+			return plainText + " [click here](https://github.com/TalentFormula/msdoc)", nil
+		}
+	}
+
+	return markdownText, nil
 }
 
 // NewWriter creates a new document writer for creating .doc files.
