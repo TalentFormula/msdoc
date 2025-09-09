@@ -10,7 +10,7 @@ import (
 func TestFKPBasicParsing(t *testing.T) {
 	// Create a mock 512-byte FKP
 	fkpData := make([]byte, 512)
-	
+
 	// Set entry count (last byte)
 	entryCount := byte(2)
 	fkpData[511] = entryCount
@@ -37,12 +37,12 @@ func TestFKPBasicParsing(t *testing.T) {
 func TestCHPXFKPParsing(t *testing.T) {
 	// Create a mock CHPX FKP with 2 entries
 	fkpData := make([]byte, 512)
-	
+
 	// Entry 1: FC=100, offset=200
 	binary.LittleEndian.PutUint32(fkpData[0:], 100)
 	fkpData[4] = 200
-	
-	// Entry 2: FC=200, offset=210  
+
+	// Entry 2: FC=200, offset=210
 	binary.LittleEndian.PutUint32(fkpData[5:], 200)
 	fkpData[9] = 210
 
@@ -107,7 +107,7 @@ func TestCHPXFKPParsing(t *testing.T) {
 func TestPAPXFKPParsing(t *testing.T) {
 	// Create a mock PAPX FKP with 1 entry
 	fkpData := make([]byte, 512)
-	
+
 	// Entry 1: FC=300, offset=220
 	binary.LittleEndian.PutUint32(fkpData[0:], 300)
 	binary.LittleEndian.PutUint16(fkpData[4:], 220)
@@ -155,15 +155,15 @@ func TestPAPXFKPParsing(t *testing.T) {
 func TestFKPFindEntryForFC(t *testing.T) {
 	// Create a mock CHPX FKP with multiple entries
 	fkpData := make([]byte, 512)
-	
+
 	// Entry 1: FC=100
 	binary.LittleEndian.PutUint32(fkpData[0:], 100)
 	fkpData[4] = 0 // No formatting data
-	
+
 	// Entry 2: FC=200
 	binary.LittleEndian.PutUint32(fkpData[5:], 200)
 	fkpData[9] = 0 // No formatting data
-	
+
 	// Entry 3: FC=300
 	binary.LittleEndian.PutUint32(fkpData[10:], 300)
 	fkpData[14] = 0 // No formatting data
@@ -183,13 +183,13 @@ func TestFKPFindEntryForFC(t *testing.T) {
 		expected uint32 // Expected FC of found entry
 		found    bool
 	}{
-		{50, 0, false},    // Before first entry
-		{100, 100, true},  // Exact match with first
-		{150, 100, true},  // Between first and second
-		{200, 200, true},  // Exact match with second
-		{250, 200, true},  // Between second and third
-		{300, 300, true},  // Exact match with third
-		{400, 300, true},  // After last entry
+		{50, 0, false},   // Before first entry
+		{100, 100, true}, // Exact match with first
+		{150, 100, true}, // Between first and second
+		{200, 200, true}, // Exact match with second
+		{250, 200, true}, // Between second and third
+		{300, 300, true}, // Exact match with third
+		{400, 300, true}, // After last entry
 	}
 
 	for _, tc := range testCases {

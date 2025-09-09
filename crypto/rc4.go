@@ -23,7 +23,7 @@ func NewRC4(key []byte) (*RC4, error) {
 	}
 
 	rc4 := &RC4{}
-	
+
 	// Key-scheduling algorithm (KSA)
 	for i := 0; i < 256; i++ {
 		rc4.s[i] = byte(i)
@@ -45,14 +45,14 @@ func NewRC4(key []byte) (*RC4, error) {
 // RC4 is symmetric, so this function can also be used for encryption.
 func (rc4 *RC4) Decrypt(data []byte) []byte {
 	output := make([]byte, len(data))
-	
+
 	for k := 0; k < len(data); k++ {
 		rc4.i++
 		rc4.j += rc4.s[rc4.i]
 		rc4.s[rc4.i], rc4.s[rc4.j] = rc4.s[rc4.j], rc4.s[rc4.i]
 		output[k] = data[k] ^ rc4.s[rc4.s[rc4.i]+rc4.s[rc4.j]]
 	}
-	
+
 	return output
 }
 
@@ -80,17 +80,17 @@ func GenerateDecryptionKey(password string, salt []byte) ([]byte, error) {
 	if len(password) == 0 {
 		return nil, errors.New("password cannot be empty")
 	}
-	
+
 	if len(salt) < 16 {
 		return nil, fmt.Errorf("salt must be at least 16 bytes, got %d", len(salt))
 	}
 
 	// Generate password hash
 	passwordHash := GeneratePasswordHash(password)
-	
+
 	// Combine password hash with document salt
 	combined := append(passwordHash, salt[:16]...)
-	
+
 	// Generate final key hash
 	finalHash := md5.Sum(combined)
 	return finalHash[:], nil

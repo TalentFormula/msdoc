@@ -19,12 +19,12 @@ import (
 
 // DocumentWriter provides functionality for creating and modifying .doc files.
 type DocumentWriter struct {
-	metadata    *DocumentInfo
-	text        []TextSection
-	oleWriter   *ole2.Writer
-	fibBuilder  *FIBBuilder
-	pieceTable  *PieceTableBuilder
-	formatting  *FormattingBuilder
+	metadata   *DocumentInfo
+	text       []TextSection
+	oleWriter  *ole2.Writer
+	fibBuilder *FIBBuilder
+	pieceTable *PieceTableBuilder
+	formatting *FormattingBuilder
 }
 
 // DocumentInfo holds document-level information.
@@ -101,10 +101,10 @@ func NewDocumentWriter() *DocumentWriter {
 			Application: "msdoc library",
 			Language:    0x0409, // English (US)
 		},
-		text:        make([]TextSection, 0),
-		fibBuilder:  NewFIBBuilder(),
-		pieceTable:  NewPieceTableBuilder(),
-		formatting:  NewFormattingBuilder(),
+		text:       make([]TextSection, 0),
+		fibBuilder: NewFIBBuilder(),
+		pieceTable: NewPieceTableBuilder(),
+		formatting: NewFormattingBuilder(),
 	}
 }
 
@@ -397,7 +397,7 @@ func (dw *DocumentWriter) buildPCD(piece PieceDescriptor) ([]byte, error) {
 	if piece.IsUnicode {
 		flags |= 0x0040 // fCompressed = 0 for Unicode
 	}
-	
+
 	binary.Write(&buffer, binary.LittleEndian, flags)
 	binary.Write(&buffer, binary.LittleEndian, piece.FileOffset)
 	binary.Write(&buffer, binary.LittleEndian, uint16(0)) // Prm (property modifier)
@@ -460,29 +460,29 @@ func (dw *DocumentWriter) buildMinimalPropertySet(info *DocumentInfo) []byte {
 	// Property set header
 	binary.Write(&buffer, binary.LittleEndian, uint16(0xFFFE)) // Byte order
 	binary.Write(&buffer, binary.LittleEndian, uint16(0x0000)) // Version
-	binary.Write(&buffer, binary.LittleEndian, uint32(0x000)) // System ID
-	
+	binary.Write(&buffer, binary.LittleEndian, uint32(0x000))  // System ID
+
 	// CLSID (16 bytes of zeros)
 	buffer.Write(make([]byte, 16))
-	
+
 	binary.Write(&buffer, binary.LittleEndian, uint32(1)) // Number of property sets
 
 	// Property set format ID and offset
-	buffer.Write(make([]byte, 16)) // Format ID (SummaryInformation GUID)
+	buffer.Write(make([]byte, 16))                         // Format ID (SummaryInformation GUID)
 	binary.Write(&buffer, binary.LittleEndian, uint32(48)) // Offset
 
 	// Property set data
 	binary.Write(&buffer, binary.LittleEndian, uint32(buffer.Len()+100)) // Size
-	binary.Write(&buffer, binary.LittleEndian, uint32(1)) // Property count
+	binary.Write(&buffer, binary.LittleEndian, uint32(1))                // Property count
 
 	// Property ID and offset for title
-	binary.Write(&buffer, binary.LittleEndian, uint32(0x02)) // PID_TITLE
+	binary.Write(&buffer, binary.LittleEndian, uint32(0x02))  // PID_TITLE
 	binary.Write(&buffer, binary.LittleEndian, uint32(48+16)) // Offset
 
 	// Title property value
 	binary.Write(&buffer, binary.LittleEndian, uint16(0x001F)) // VT_LPWSTR
 	binary.Write(&buffer, binary.LittleEndian, uint16(0x0000)) // Padding
-	
+
 	titleBytes := []byte(info.Title)
 	binary.Write(&buffer, binary.LittleEndian, uint32(len(titleBytes)+1)) // Length
 	buffer.Write(titleBytes)
@@ -518,11 +518,11 @@ func (fb *FIBBuilder) Build() ([]byte, error) {
 	var buffer bytes.Buffer
 
 	// Set required FIB fields
-	fb.fib.Base.WIdent = 0xA5EC      // Word identifier
-	fb.fib.Base.NFib = 0x0112        // Word 2003 FIB version
-	fb.fib.Base.LKey = 0             // No encryption key
-	fb.fib.Base.Envr = 0             // Not created by Word
-	fb.fib.Base.Flags1 = 0x0000      // No special flags
+	fb.fib.Base.WIdent = 0xA5EC // Word identifier
+	fb.fib.Base.NFib = 0x0112   // Word 2003 FIB version
+	fb.fib.Base.LKey = 0        // No encryption key
+	fb.fib.Base.Envr = 0        // Not created by Word
+	fb.fib.Base.Flags1 = 0x0000 // No special flags
 
 	// Write FIB base
 	if err := binary.Write(&buffer, binary.LittleEndian, &fb.fib.Base); err != nil {

@@ -60,7 +60,7 @@ func TestPLCParsing(t *testing.T) {
 		expectedStart := expectedCPs[i]
 		expectedEnd := expectedCPs[i+1]
 		if start != expectedStart || end != expectedEnd {
-			t.Errorf("Range[%d]: expected (%d, %d), got (%d, %d)", 
+			t.Errorf("Range[%d]: expected (%d, %d), got (%d, %d)",
 				i, expectedStart, expectedEnd, start, end)
 		}
 	}
@@ -85,11 +85,11 @@ func TestPLCInvalidData(t *testing.T) {
 func TestPCDParsing(t *testing.T) {
 	// Create a mock PCD (8 bytes)
 	pcdData := make([]byte, 8)
-	
+
 	// Set flags (first 2 bytes)
 	flags := uint16(0x0003) // fNoEncryption | fComplex
 	binary.LittleEndian.PutUint16(pcdData[0:], flags)
-	
+
 	// Set FC (next 4 bytes) with Unicode flag
 	fc := uint32(0x40001000) // Unicode text at position 0x1000
 	binary.LittleEndian.PutUint32(pcdData[2:], fc)
@@ -139,12 +139,12 @@ func TestPlcPcdParsing(t *testing.T) {
 	// Write PCDs
 	// PCD 1: ANSI text
 	offset := 12
-	binary.LittleEndian.PutUint16(plcData[offset:], 0x0001) // fNoEncryption
+	binary.LittleEndian.PutUint16(plcData[offset:], 0x0001)   // fNoEncryption
 	binary.LittleEndian.PutUint32(plcData[offset+2:], 0x2000) // FC (ANSI)
 
 	// PCD 2: Unicode text
 	offset = 20
-	binary.LittleEndian.PutUint16(plcData[offset:], 0x0000) // No flags
+	binary.LittleEndian.PutUint16(plcData[offset:], 0x0000)       // No flags
 	binary.LittleEndian.PutUint32(plcData[offset+2:], 0x40003000) // FC (Unicode)
 
 	// Parse PlcPcd

@@ -24,21 +24,21 @@ type SEP struct {
 	DyaHdrBottom uint16 // Header bottom margin in twips
 
 	// Page orientation and layout
-	FLandscape   bool   // True if landscape orientation
-	FContinuous  bool   // True if continuous section break
-	FTitlePage   bool   // True if different first page
-	FPgnRestart  bool   // True if restart page numbering
-	PgnStart     uint16 // Starting page number
+	FLandscape  bool   // True if landscape orientation
+	FContinuous bool   // True if continuous section break
+	FTitlePage  bool   // True if different first page
+	FPgnRestart bool   // True if restart page numbering
+	PgnStart    uint16 // Starting page number
 
 	// Column layout
-	CcolM1    uint16   // Number of columns minus 1
-	FEvenlySpaced bool // True if columns are evenly spaced
+	CcolM1        uint16 // Number of columns minus 1
+	FEvenlySpaced bool   // True if columns are evenly spaced
 	DxaColumns    uint16 // Space between columns in twips
 
 	// Line numbering
-	Lnc      uint8  // Line number count
-	DxaLnn   uint16 // Distance from text to line numbers
-	LnnMin   uint16 // Starting line number
+	Lnc    uint8  // Line number count
+	DxaLnn uint16 // Distance from text to line numbers
+	LnnMin uint16 // Starting line number
 
 	// Headers and footers
 	GrpfIhdt uint8 // Header/footer flags

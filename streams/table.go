@@ -83,7 +83,7 @@ func (ts *TableStream) GetCharacterFormattingTable(fcPlcfbteChpx, lcbPlcfbteChpx
 	}
 
 	chpxData := ts.Data[fcPlcfbteChpx : fcPlcfbteChpx+lcbPlcfbteChpx]
-	// BTE (Bin Table Entry) structures are 4 bytes each  
+	// BTE (Bin Table Entry) structures are 4 bytes each
 	return structures.ParsePLC(chpxData, 4)
 }
 
