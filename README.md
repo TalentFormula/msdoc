@@ -1,6 +1,7 @@
 # MsDoc
 
 > An implementation of the .doc file format in go
+## ⚠️ ALL THE ACTIVE DEVELOPMENT IS HAPPENING IN THE `develop` branch
 
 ## (Planned) Project structure
 ```
