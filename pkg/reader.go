@@ -3,6 +3,7 @@ package msdoc
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"time"
 	"unicode/utf16"
 
@@ -43,7 +44,18 @@ func (d *Document) extractUnencryptedText() (string, error) {
 	tableStreamName := d.fib.GetTableStreamName()
 	tableStream, err := d.reader.ReadStream(tableStreamName)
 	if err != nil {
-		return "", fmt.Errorf("failed to read table stream %s: %w", tableStreamName, err)
+		// If the requested table stream doesn't exist, try the alternative
+		alternativeStreamName := "0Table"
+		if tableStreamName == "0Table" {
+			alternativeStreamName = "1Table"
+		}
+		
+		tableStream, err = d.reader.ReadStream(alternativeStreamName)
+		if err != nil {
+			// If neither table stream exists, use fallback text extraction
+			return d.extractTextFallback()
+		}
+		tableStreamName = alternativeStreamName
 	}
 
 	// Get the piece table location from FIB
@@ -51,7 +63,9 @@ func (d *Document) extractUnencryptedText() (string, error) {
 	clxSize := d.fib.RgFcLcb.LcbClx
 
 	if clxSize == 0 {
-		return "", nil // No text content
+		// Fallback: Try to read text directly from WordDocument stream
+		// Many older Word documents store text starting at offset 2048
+		return d.extractTextFallback()
 	}
 
 	if uint32(len(tableStream)) < clxOffset+clxSize {
@@ -87,7 +101,18 @@ func (d *Document) extractEncryptedText() (string, error) {
 	tableStreamName := d.fib.GetTableStreamName()
 	tableStream, err := d.reader.ReadStream(tableStreamName)
 	if err != nil {
-		return "", fmt.Errorf("failed to read table stream %s: %w", tableStreamName, err)
+		// If the requested table stream doesn't exist, try the alternative
+		alternativeStreamName := "0Table"
+		if tableStreamName == "0Table" {
+			alternativeStreamName = "1Table"
+		}
+		
+		tableStream, err = d.reader.ReadStream(alternativeStreamName)
+		if err != nil {
+			// If neither table stream exists, use fallback text extraction
+			return d.extractTextFallback()
+		}
+		tableStreamName = alternativeStreamName
 	}
 
 	// Skip encryption header and get piece table
@@ -196,6 +221,78 @@ func (d *Document) extractTextFromPieces(plcPcd *structures.PlcPcd, wordStream [
 	}
 
 	return textBuilder.String(), nil
+}
+
+// extractTextFallback attempts to extract text when piece table parsing fails.
+// This handles older Word documents that may store text at fixed locations.
+func (d *Document) extractTextFallback() (string, error) {
+	// Get the WordDocument stream for text content
+	wordStream, err := d.reader.ReadStream("WordDocument")
+	if err != nil {
+		return "", fmt.Errorf("failed to read WordDocument stream: %w", err)
+	}
+
+	// Try common text locations in older Word documents
+	// Many documents store text starting around offset 2048
+	textOffsets := []int{2048, 1024, 3072, 4096}
+	
+	var bestText string
+	maxLength := 0
+
+	for _, offset := range textOffsets {
+		if offset >= len(wordStream) {
+			continue
+		}
+		
+		text := d.extractRawTextFromOffset(wordStream, offset)
+		if len(text) > maxLength && len(text) > 10 { // Minimum viable text length
+			bestText = text
+			maxLength = len(text)
+		}
+	}
+
+	return bestText, nil
+}
+
+// extractRawTextFromOffset extracts readable text from a specific offset in the WordDocument stream.
+func (d *Document) extractRawTextFromOffset(wordStream []byte, offset int) string {
+	if offset >= len(wordStream) {
+		return ""
+	}
+
+	var textBuilder strings.Builder
+	remaining := wordStream[offset:]
+	
+	for i := 0; i < len(remaining); i++ {
+		b := remaining[i]
+		
+		// Handle printable ASCII characters
+		if b >= 32 && b <= 126 {
+			textBuilder.WriteByte(b)
+		} else if b == 13 || b == 10 { // CR/LF
+			textBuilder.WriteByte('\n')
+		} else if b == 9 { // Tab
+			textBuilder.WriteByte('\t')
+		} else if b == 0 {
+			// Null bytes might indicate end of text or Unicode padding
+			// Stop if we encounter multiple consecutive nulls
+			if i+1 < len(remaining) && remaining[i+1] == 0 {
+				break
+			}
+			// Otherwise treat as space
+			textBuilder.WriteByte(' ')
+		} else if b > 126 {
+			// Possible extended ASCII or Unicode, stop extraction
+			break
+		}
+		
+		// Stop if we've found a reasonable amount of text and hit non-text data
+		if textBuilder.Len() > 50 && (b < 32 && b != 9 && b != 10 && b != 13) {
+			break
+		}
+	}
+
+	return strings.TrimSpace(textBuilder.String())
 }
 
 // Metadata extracts comprehensive metadata from the document.
