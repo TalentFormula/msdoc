@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 	"unicode/utf16"
 
@@ -91,6 +92,7 @@ const (
 	PropertyTypeFileTime     PropertyType = 0x0040 // VT_FILETIME
 	PropertyTypeBlob         PropertyType = 0x0041 // VT_BLOB
 	PropertyTypeClipboardData PropertyType = 0x0047 // VT_CF
+	PropertyTypeStringA      PropertyType = 0x001E // VT_LPSTR
 	PropertyTypeStringW      PropertyType = 0x001F // VT_LPWSTR
 )
 
@@ -479,7 +481,7 @@ func (me *MetadataExtractor) readPropertyValue(reader *bytes.Reader) (interface{
 		unixTime := (filetime - fileTimeEpoch) / 10000000
 		return time.Unix(unixTime, 0), nil
 
-	case PropertyTypeString, PropertyTypeStringW:
+	case PropertyTypeString, PropertyTypeStringA, PropertyTypeStringW:
 		// Read string length
 		var length uint32
 		if err := binary.Read(reader, binary.LittleEndian, &length); err != nil {
@@ -497,18 +499,19 @@ func (me *MetadataExtractor) readPropertyValue(reader *bytes.Reader) (interface{
 			if err := binary.Read(reader, binary.LittleEndian, &utf16Data); err != nil {
 				return nil, err
 			}
-			return string(utf16.Decode(utf16Data)), nil
+			return strings.TrimSpace(string(utf16.Decode(utf16Data))), nil
 		} else {
-			// ANSI string
+			// ANSI string (PropertyTypeString or PropertyTypeStringA)
 			strData := make([]byte, length)
 			if _, err := reader.Read(strData); err != nil {
 				return nil, err
 			}
-			// Remove null terminator if present
-			if len(strData) > 0 && strData[len(strData)-1] == 0 {
+			// Remove all trailing null characters
+			for len(strData) > 0 && strData[len(strData)-1] == 0 {
 				strData = strData[:len(strData)-1]
 			}
-			return string(strData), nil
+			// Trim whitespace from the string
+			return strings.TrimSpace(string(strData)), nil
 		}
 
 	case PropertyTypeBlob, PropertyTypeClipboardData:
