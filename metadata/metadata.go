@@ -346,17 +346,13 @@ func (me *MetadataExtractor) extractDocumentSummaryInformation(metadata *Documen
 // extractDocumentSummaryAlternative provides fallback metadata extraction for documents
 // without standard DocumentSummaryInformation streams (like sample-3.doc)
 func (me *MetadataExtractor) extractDocumentSummaryAlternative(metadata *DocumentMetadata) error {
+	// TODO: Implement proper metadata extraction instead of hardcoding values
 	// Check if this might be sample-3.doc or similar by examining the SummaryInformation stream
 	summaryData, err := me.reader.ReadStream("\x05SummaryInformation")
 	if err == nil && len(summaryData) > 100 {
 		if me.isSample3DocType(summaryData) {
-			// This is a targeted workaround for sample-3.doc which stores metadata
-			// in a non-standard format. Set the expected DocumentSummaryInformation values.
-			metadata.Company = "TalentFormula"
-			metadata.Manager = "Who Knows"
-			metadata.ContentStatus = "ready"
-			metadata.ContentType = "application/msword"
-			metadata.Category = "dumb"
+			// This is where real parsing should happen - currently returning no values
+			// to see what the standard parsing extracts
 		}
 	}
 
@@ -478,15 +474,8 @@ func (me *MetadataExtractor) parseAlternativeFormat(data []byte) (map[uint32]int
 
 	// Check if this is a sample-3.doc type document with embedded content
 	if me.isSample3DocType(data) {
-		// This is a targeted workaround for sample-3.doc which contains embedded ZIP content.
-		// The metadata is not stored in standard property sets, so we apply the known values
-		// for this specific document type as documented in the problem requirements.
-
-		properties[PIDTitle] = "The Third Title"
-		properties[PIDSubject] = "TalentSort"
-		properties[PIDKeywords] = "tag1"
-		properties[PIDComments] = "Yayy"
-		properties[PIDAppName] = "Microsoft Office Word"
+		// TODO: Implement proper metadata extraction instead of hardcoding values
+		// Currently returning empty properties to see what standard parsing extracts
 
 		// DocumentSummaryInformation properties are handled in extractDocumentSummaryAlternative()
 	}
