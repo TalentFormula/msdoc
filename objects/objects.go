@@ -18,25 +18,25 @@ import (
 type ObjectType int
 
 const (
-	ObjectTypeUnknown ObjectType = iota
-	ObjectTypeOLE                // OLE object (Excel sheet, PowerPoint, etc.)
-	ObjectTypeImage              // Image (BMP, PNG, JPEG, etc.)
-	ObjectTypeChart              // Chart or graph
-	ObjectTypeEquation           // Mathematical equation
-	ObjectTypeDrawing            // Drawing or shape
+	ObjectTypeUnknown  ObjectType = iota
+	ObjectTypeOLE                 // OLE object (Excel sheet, PowerPoint, etc.)
+	ObjectTypeImage               // Image (BMP, PNG, JPEG, etc.)
+	ObjectTypeChart               // Chart or graph
+	ObjectTypeEquation            // Mathematical equation
+	ObjectTypeDrawing             // Drawing or shape
 )
 
 // EmbeddedObject represents an object embedded in the document.
 type EmbeddedObject struct {
-	Type        ObjectType    // Type of the embedded object
-	Name        string        // Object name or description
-	ClassName   string        // OLE class name (for OLE objects)
-	Data        []byte        // Raw object data
-	IconData    []byte        // Icon representation data
-	Size        int64         // Size of the object data
-	Position    uint32        // Position in document where object is referenced
-	IsLinked    bool          // True if object is linked rather than embedded
-	LinkPath    string        // Path to linked file (if applicable)
+	Type      ObjectType // Type of the embedded object
+	Name      string     // Object name or description
+	ClassName string     // OLE class name (for OLE objects)
+	Data      []byte     // Raw object data
+	IconData  []byte     // Icon representation data
+	Size      int64      // Size of the object data
+	Position  uint32     // Position in document where object is referenced
+	IsLinked  bool       // True if object is linked rather than embedded
+	LinkPath  string     // Path to linked file (if applicable)
 }
 
 // ObjectPool manages embedded objects within a .doc file.
@@ -68,7 +68,7 @@ func (op *ObjectPool) LoadObjects() error {
 // parseObjectPool parses the ObjectPool stream data.
 func (op *ObjectPool) parseObjectPool(data []byte) error {
 	reader := bytes.NewReader(data)
-	
+
 	for reader.Len() > 0 {
 		obj, err := op.parseObject(reader)
 		if err != nil {
@@ -77,12 +77,12 @@ func (op *ObjectPool) parseObjectPool(data []byte) error {
 			}
 			return fmt.Errorf("failed to parse object: %w", err)
 		}
-		
+
 		if obj != nil {
 			op.objects[obj.Position] = obj
 		}
 	}
-	
+
 	return nil
 }
 
@@ -95,38 +95,38 @@ func (op *ObjectPool) parseObject(reader *bytes.Reader) (*EmbeddedObject, error)
 		Type      uint16 // Object type
 		Flags     uint16 // Object flags
 	}
-	
+
 	if err := binary.Read(reader, binary.LittleEndian, &header); err != nil {
 		return nil, err
 	}
-	
+
 	// Validate object signature
 	if header.Signature != 0x00000501 { // Standard OLE object signature
 		return nil, fmt.Errorf("invalid object signature: 0x%x", header.Signature)
 	}
-	
+
 	obj := &EmbeddedObject{
 		Size:     int64(header.Size),
 		Position: uint32(reader.Size()) - uint32(reader.Len()), // Current position
 	}
-	
+
 	// Determine object type
 	obj.Type = op.determineObjectType(header.Type, header.Flags)
 	obj.IsLinked = (header.Flags & 0x0001) != 0
-	
+
 	// Read object data
 	if header.Size > 0 {
 		obj.Data = make([]byte, header.Size)
 		if _, err := reader.Read(obj.Data); err != nil {
 			return nil, fmt.Errorf("failed to read object data: %w", err)
 		}
-		
+
 		// Parse object-specific data
 		if err := op.parseObjectData(obj); err != nil {
 			return nil, fmt.Errorf("failed to parse object-specific data: %w", err)
 		}
 	}
-	
+
 	return obj, nil
 }
 
@@ -153,9 +153,9 @@ func (op *ObjectPool) parseObjectData(obj *EmbeddedObject) error {
 	if len(obj.Data) < 4 {
 		return nil // Not enough data to parse
 	}
-	
+
 	reader := bytes.NewReader(obj.Data)
-	
+
 	switch obj.Type {
 	case ObjectTypeOLE:
 		return op.parseOLEObject(obj, reader)
@@ -173,15 +173,15 @@ func (op *ObjectPool) parseObjectData(obj *EmbeddedObject) error {
 func (op *ObjectPool) parseOLEObject(obj *EmbeddedObject, reader *bytes.Reader) error {
 	// Read OLE object header
 	var oleHeader struct {
-		Version   uint32 // OLE version
-		Flags     uint32 // OLE flags  
-		NameLen   uint32 // Length of class name
+		Version uint32 // OLE version
+		Flags   uint32 // OLE flags
+		NameLen uint32 // Length of class name
 	}
-	
+
 	if err := binary.Read(reader, binary.LittleEndian, &oleHeader); err != nil {
 		return fmt.Errorf("failed to read OLE header: %w", err)
 	}
-	
+
 	// Read class name
 	if oleHeader.NameLen > 0 {
 		nameBytes := make([]byte, oleHeader.NameLen)
@@ -190,12 +190,12 @@ func (op *ObjectPool) parseOLEObject(obj *EmbeddedObject, reader *bytes.Reader) 
 		}
 		obj.ClassName = string(nameBytes)
 	}
-	
+
 	// The remaining data is the actual OLE object
 	remaining := make([]byte, reader.Len())
 	reader.Read(remaining)
 	obj.Data = remaining
-	
+
 	return nil
 }
 
@@ -207,19 +207,19 @@ func (op *ObjectPool) parseImageObject(obj *EmbeddedObject, reader *bytes.Reader
 		Width  uint32 // Image width
 		Height uint32 // Image height
 	}
-	
+
 	if err := binary.Read(reader, binary.LittleEndian, &imgHeader); err != nil {
 		return fmt.Errorf("failed to read image header: %w", err)
 	}
-	
+
 	// Determine image format
 	obj.Name = op.getImageFormatName(imgHeader.Format)
-	
+
 	// The remaining data is the actual image
 	remaining := make([]byte, reader.Len())
 	reader.Read(remaining)
 	obj.Data = remaining
-	
+
 	return nil
 }
 
@@ -228,12 +228,12 @@ func (op *ObjectPool) parseChartObject(obj *EmbeddedObject, reader *bytes.Reader
 	// Chart objects are typically Excel chart objects
 	obj.ClassName = "Excel.Chart"
 	obj.Name = "Chart"
-	
+
 	// The data is the chart definition
 	remaining := make([]byte, reader.Len())
 	reader.Read(remaining)
 	obj.Data = remaining
-	
+
 	return nil
 }
 
@@ -269,7 +269,7 @@ func (op *ObjectPool) ExtractObject(position uint32) (*EmbeddedObject, error) {
 	if obj == nil {
 		return nil, fmt.Errorf("no object found at position %d", position)
 	}
-	
+
 	return obj, nil
 }
 
@@ -278,7 +278,7 @@ func (obj *EmbeddedObject) SaveObject(filename string) error {
 	if len(obj.Data) == 0 {
 		return errors.New("no object data to save")
 	}
-	
+
 	// Implementation would write obj.Data to filename
 	// This is a placeholder for the actual file writing logic
 	return fmt.Errorf("save functionality not yet implemented")
@@ -287,7 +287,7 @@ func (obj *EmbeddedObject) SaveObject(filename string) error {
 // GetObjectInfo returns human-readable information about the object.
 func (obj *EmbeddedObject) GetObjectInfo() string {
 	typeStr := obj.getTypeString()
-	
+
 	info := fmt.Sprintf("Type: %s", typeStr)
 	if obj.Name != "" {
 		info += fmt.Sprintf(", Name: %s", obj.Name)
@@ -299,7 +299,7 @@ func (obj *EmbeddedObject) GetObjectInfo() string {
 	if obj.IsLinked {
 		info += fmt.Sprintf(", Linked to: %s", obj.LinkPath)
 	}
-	
+
 	return info
 }
 

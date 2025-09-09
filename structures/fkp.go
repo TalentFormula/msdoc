@@ -68,13 +68,13 @@ func ParseFKP(data []byte, fkpType FKPType) (*FKP, error) {
 // parseCHPXFKP parses a character properties FKP.
 func parseCHPXFKP(fkp *FKP) (*FKP, error) {
 	entryCount := fkp.EntryCount
-	
+
 	// Validate that we have enough space for the entries
 	// Each entry is 5 bytes (4 bytes FC + 1 byte offset)
 	if entryCount*5 > FKPSize-1 { // -1 for the count byte
 		return nil, fmt.Errorf("fkp: too many entries (%d) for CHPX FKP", entryCount)
 	}
-	
+
 	entries := make([]FKPEntry, entryCount)
 
 	// Each entry consists of a 4-byte FC followed by a 1-byte offset
@@ -116,13 +116,13 @@ func parseCHPXFKP(fkp *FKP) (*FKP, error) {
 // parsePAPXFKP parses a paragraph properties FKP.
 func parsePAPXFKP(fkp *FKP) (*FKP, error) {
 	entryCount := fkp.EntryCount
-	
+
 	// Validate that we have enough space for the entries
 	// Each entry is 6 bytes (4 bytes FC + 2 bytes offset)
 	if entryCount*6 > FKPSize-1 { // -1 for the count byte
 		return nil, fmt.Errorf("fkp: too many entries (%d) for PAPX FKP", entryCount)
 	}
-	
+
 	entries := make([]FKPEntry, entryCount)
 
 	// Each entry consists of a 4-byte FC followed by a 2-byte offset

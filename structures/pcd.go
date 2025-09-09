@@ -29,10 +29,10 @@ func ParsePCD(data []byte) (*PCD, error) {
 
 	// Next 4 bytes contain the file character position
 	fc := binary.LittleEndian.Uint32(data[2:6])
-	
+
 	// Check if this is Unicode text
 	pcd.IsUnicode = (fc & 0x40000000) != 0
-	
+
 	// Clear the Unicode flag to get the actual file position
 	pcd.FC = fc & 0x3FFFFFFF
 
@@ -89,11 +89,11 @@ func (plcpcd *PlcPcd) GetTextRange(index int) (start, end CP, pcd *PCD, err erro
 	if index < 0 || index >= len(plcpcd.Pieces) {
 		return 0, 0, nil, fmt.Errorf("plcpcd: invalid index %d", index)
 	}
-	
+
 	start, end, err = plcpcd.GetRange(index)
 	if err != nil {
 		return 0, 0, nil, err
 	}
-	
+
 	return start, end, plcpcd.Pieces[index], nil
 }

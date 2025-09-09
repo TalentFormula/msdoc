@@ -18,24 +18,24 @@ import (
 
 // VBAProject represents a VBA project contained in the document.
 type VBAProject struct {
-	Name        string            // Project name
-	Description string            // Project description
-	HelpFile    string            // Help file path
+	Name        string             // Project name
+	Description string             // Project description
+	HelpFile    string             // Help file path
 	Modules     map[string]*Module // VBA modules by name
-	References  []*Reference      // External references
-	Protected   bool              // True if project is protected
-	Password    string            // Project password (if known)
+	References  []*Reference       // External references
+	Protected   bool               // True if project is protected
+	Password    string             // Project password (if known)
 }
 
 // Module represents a VBA module (code module, class module, or form).
 type Module struct {
-	Name         string     // Module name
-	Type         ModuleType // Module type
-	Code         string     // VBA source code
-	Compressed   bool       // True if code is compressed
-	StreamName   string     // Storage stream name
-	Offset       uint32     // Offset within stream
-	Size         uint32     // Uncompressed size
+	Name       string     // Module name
+	Type       ModuleType // Module type
+	Code       string     // VBA source code
+	Compressed bool       // True if code is compressed
+	StreamName string     // Storage stream name
+	Offset     uint32     // Offset within stream
+	Size       uint32     // Uncompressed size
 }
 
 // Reference represents an external reference used by the VBA project.
@@ -176,7 +176,7 @@ func (me *MacroExtractor) parseDirStream(project *VBAProject, data []byte) error
 func (me *MacroExtractor) parseProjectRecord(project *VBAProject, data []byte) {
 	// Extract project name, description, etc.
 	reader := bytes.NewReader(data)
-	
+
 	// Read null-terminated strings
 	project.Name = me.readNullTerminatedString(reader)
 	project.Description = me.readNullTerminatedString(reader)
@@ -194,7 +194,7 @@ func (me *MacroExtractor) parseModuleRecord(data []byte) (*Module, error) {
 
 	// Read module name
 	module.Name = me.readNullTerminatedString(reader)
-	
+
 	// Read module type
 	var moduleType uint32
 	if err := binary.Read(reader, binary.LittleEndian, &moduleType); err != nil {
@@ -209,7 +209,7 @@ func (me *MacroExtractor) parseModuleRecord(data []byte) (*Module, error) {
 	if err := binary.Read(reader, binary.LittleEndian, &module.Offset); err != nil {
 		return nil, fmt.Errorf("failed to read module offset: %w", err)
 	}
-	
+
 	if err := binary.Read(reader, binary.LittleEndian, &module.Size); err != nil {
 		return nil, fmt.Errorf("failed to read module size: %w", err)
 	}
@@ -310,7 +310,7 @@ func (me *MacroExtractor) decompressVBACode(data []byte) ([]byte, error) {
 func (me *MacroExtractor) decompressVBACustom(data []byte) ([]byte, error) {
 	// This is a simplified implementation of VBA decompression
 	// A complete implementation would handle the full VBA compression algorithm
-	
+
 	var output bytes.Buffer
 	reader := bytes.NewReader(data)
 
@@ -342,7 +342,7 @@ func (me *MacroExtractor) decompressVBACustom(data []byte) ([]byte, error) {
 // readNullTerminatedString reads a null-terminated string from the reader.
 func (me *MacroExtractor) readNullTerminatedString(reader *bytes.Reader) string {
 	var result strings.Builder
-	
+
 	for {
 		b, err := reader.ReadByte()
 		if err != nil || b == 0 {
@@ -350,7 +350,7 @@ func (me *MacroExtractor) readNullTerminatedString(reader *bytes.Reader) string 
 		}
 		result.WriteByte(b)
 	}
-	
+
 	return result.String()
 }
 
@@ -375,8 +375,8 @@ func (project *VBAProject) GetAllModuleNames() []string {
 // HasMacroFunctions checks if any module contains macro functions.
 func (project *VBAProject) HasMacroFunctions() bool {
 	for _, module := range project.Modules {
-		if strings.Contains(module.Code, "Sub ") || 
-		   strings.Contains(module.Code, "Function ") {
+		if strings.Contains(module.Code, "Sub ") ||
+			strings.Contains(module.Code, "Function ") {
 			return true
 		}
 	}

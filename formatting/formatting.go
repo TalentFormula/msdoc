@@ -12,75 +12,75 @@ import (
 
 // TextRun represents a run of text with consistent formatting.
 type TextRun struct {
-	Text      string              // The actual text content
-	StartPos  uint32              // Starting character position
-	EndPos    uint32              // Ending character position  
+	Text      string               // The actual text content
+	StartPos  uint32               // Starting character position
+	EndPos    uint32               // Ending character position
 	CharProps *CharacterProperties // Character formatting properties
 	ParaProps *ParagraphProperties // Paragraph formatting properties (if paragraph boundary)
 }
 
 // CharacterProperties holds all character-level formatting information.
 type CharacterProperties struct {
-	FontName       string      // Font family name
-	FontSize       uint16      // Font size in half-points (e.g., 24 = 12pt)
-	Bold           bool        // Bold formatting
-	Italic         bool        // Italic formatting
+	FontName       string        // Font family name
+	FontSize       uint16        // Font size in half-points (e.g., 24 = 12pt)
+	Bold           bool          // Bold formatting
+	Italic         bool          // Italic formatting
 	Underline      UnderlineType // Underline style
-	Strikethrough  bool        // Strikethrough formatting
-	Superscript    bool        // Superscript formatting
-	Subscript      bool        // Subscript formatting
-	Color          Color       // Text color
-	HighlightColor Color       // Highlight/background color
-	FontCharset    uint8       // Character set (for non-ASCII text)
-	Language       uint16      // Language identifier
-	Hidden         bool        // Hidden text
-	SmallCaps      bool        // Small capitals
-	AllCaps        bool        // All capitals
-	Spacing        int16       // Character spacing in twips
-	Scale          uint16      // Horizontal scaling percentage
-	Position       int16       // Vertical position offset
-	Border         *Border     // Character border
-	Shading        *Shading    // Character shading
+	Strikethrough  bool          // Strikethrough formatting
+	Superscript    bool          // Superscript formatting
+	Subscript      bool          // Subscript formatting
+	Color          Color         // Text color
+	HighlightColor Color         // Highlight/background color
+	FontCharset    uint8         // Character set (for non-ASCII text)
+	Language       uint16        // Language identifier
+	Hidden         bool          // Hidden text
+	SmallCaps      bool          // Small capitals
+	AllCaps        bool          // All capitals
+	Spacing        int16         // Character spacing in twips
+	Scale          uint16        // Horizontal scaling percentage
+	Position       int16         // Vertical position offset
+	Border         *Border       // Character border
+	Shading        *Shading      // Character shading
 }
 
 // ParagraphProperties holds all paragraph-level formatting information.
 type ParagraphProperties struct {
-	Alignment      ParagraphAlignment // Text alignment
-	LeftIndent     int32              // Left indent in twips
-	RightIndent    int32              // Right indent in twips
-	FirstLineIndent int32             // First line indent in twips
-	SpaceBefore    uint16             // Space before paragraph in twips
-	SpaceAfter     uint16             // Space after paragraph in twips
-	LineSpacing    LineSpacing        // Line spacing configuration
-	KeepWithNext   bool               // Keep with next paragraph
-	KeepTogether   bool               // Keep paragraph together
-	PageBreakBefore bool              // Force page break before
-	WidowControl   bool               // Widow/orphan control
-	Borders        *ParagraphBorders  // Paragraph borders
-	Shading        *Shading           // Paragraph shading
-	TabStops       []TabStop          // Tab stop positions
-	OutlineLevel   uint8              // Outline level (0-9)
-	StyleName      string             // Applied paragraph style name
+	Alignment       ParagraphAlignment // Text alignment
+	LeftIndent      int32              // Left indent in twips
+	RightIndent     int32              // Right indent in twips
+	FirstLineIndent int32              // First line indent in twips
+	SpaceBefore     uint16             // Space before paragraph in twips
+	SpaceAfter      uint16             // Space after paragraph in twips
+	LineSpacing     LineSpacing        // Line spacing configuration
+	KeepWithNext    bool               // Keep with next paragraph
+	KeepTogether    bool               // Keep paragraph together
+	PageBreakBefore bool               // Force page break before
+	WidowControl    bool               // Widow/orphan control
+	Borders         *ParagraphBorders  // Paragraph borders
+	Shading         *Shading           // Paragraph shading
+	TabStops        []TabStop          // Tab stop positions
+	OutlineLevel    uint8              // Outline level (0-9)
+	StyleName       string             // Applied paragraph style name
 }
 
 // SectionProperties holds section-level formatting information.
 type SectionProperties struct {
-	PageWidth      uint32            // Page width in twips
-	PageHeight     uint32            // Page height in twips
-	LeftMargin     uint32            // Left margin in twips
-	RightMargin    uint32            // Right margin in twips
-	TopMargin      uint32            // Top margin in twips
-	BottomMargin   uint32            // Bottom margin in twips
-	HeaderMargin   uint32            // Header margin in twips
-	FooterMargin   uint32            // Footer margin in twips
-	Orientation    PageOrientation   // Page orientation
-	Columns        uint16            // Number of columns
-	ColumnSpacing  uint32            // Column spacing in twips
-	VerticalAlign  VerticalAlignment // Vertical alignment
-	PageBorders    *PageBorders      // Page borders
-	PageBackground *Shading          // Page background
-	LineNumbers    *LineNumbering    // Line numbering settings
-	EndnoteProps   *EndnoteProperties // Endnote properties
+	PageWidth      uint32              // Page width in twips
+	PageHeight     uint32              // Page height in twips
+	LeftMargin     uint32              // Left margin in twips
+	RightMargin    uint32              // Right margin in twips
+	TopMargin      uint32              // Top margin in twips
+	BottomMargin   uint32              // Bottom margin in twips
+	HeaderMargin   uint32              // Header margin in twips
+	FooterMargin   uint32              // Footer margin in twips
+	Orientation    PageOrientation     // Page orientation
+	Columns        uint16              // Number of columns
+	ColumnSpacing  uint32              // Column spacing in twips
+	VerticalAlign  VerticalAlignment   // Vertical alignment
+	PageBorders    *PageBorders        // Page borders
+	PageBackground *Shading            // Page background
+	LineNumbers    *LineNumbering      // Line numbering settings
+	EndnoteProps   *EndnoteProperties  // Endnote properties
 	FootnoteProps  *FootnoteProperties // Footnote properties
 }
 
@@ -100,7 +100,7 @@ const (
 // Color represents an RGB color value.
 type Color struct {
 	Red   uint8 // Red component (0-255)
-	Green uint8 // Green component (0-255)  
+	Green uint8 // Green component (0-255)
 	Blue  uint8 // Blue component (0-255)
 	Auto  bool  // True if color is automatic
 }
@@ -154,11 +154,11 @@ const (
 
 // Border represents border formatting.
 type Border struct {
-	Style     BorderStyle // Border style
-	Width     uint16      // Border width in eighth-points
-	Color     Color       // Border color
-	Spacing   uint16      // Distance from text in points
-	Shadow    bool        // Drop shadow effect
+	Style   BorderStyle // Border style
+	Width   uint16      // Border width in eighth-points
+	Color   Color       // Border color
+	Spacing uint16      // Distance from text in points
+	Shadow  bool        // Drop shadow effect
 }
 
 // BorderStyle represents different border styles.
@@ -177,10 +177,10 @@ const (
 
 // Shading represents background shading/fill.
 type Shading struct {
-	Pattern     ShadingPattern // Fill pattern
-	ForeColor   Color          // Foreground color
-	BackColor   Color          // Background color
-	Percentage  uint16         // Fill percentage (0-100)
+	Pattern    ShadingPattern // Fill pattern
+	ForeColor  Color          // Foreground color
+	BackColor  Color          // Background color
+	Percentage uint16         // Fill percentage (0-100)
 }
 
 // ShadingPattern represents fill patterns.
@@ -216,16 +216,16 @@ type ParagraphBorders struct {
 // PageBorders represents borders around a page.
 type PageBorders struct {
 	Top    *Border // Top border
-	Left   *Border // Left border  
+	Left   *Border // Left border
 	Bottom *Border // Bottom border
 	Right  *Border // Right border
 }
 
 // TabStop represents a tab stop position.
 type TabStop struct {
-	Position  uint32        // Tab position in twips
-	Type      TabStopType   // Tab type
-	Leader    TabLeader     // Tab leader character
+	Position uint32      // Tab position in twips
+	Type     TabStopType // Tab type
+	Leader   TabLeader   // Tab leader character
 }
 
 // TabStopType represents different tab stop types.
@@ -252,9 +252,9 @@ const (
 
 // LineNumbering represents line numbering settings.
 type LineNumbering struct {
-	Start    uint16 // Starting line number
-	Distance uint32 // Distance from text in twips
-	Interval uint16 // Numbering interval (every Nth line)
+	Start    uint16            // Starting line number
+	Distance uint32            // Distance from text in twips
+	Interval uint16            // Numbering interval (every Nth line)
 	Restart  LineNumberRestart // Restart behavior
 }
 
@@ -341,7 +341,7 @@ const (
 
 // FormattingExtractor extracts formatting information from FKP structures.
 type FormattingExtractor struct {
-	fontTable map[uint16]string // Font table mapping
+	fontTable  map[uint16]string // Font table mapping
 	styleTable map[uint16]string // Style table mapping
 }
 

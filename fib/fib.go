@@ -32,24 +32,24 @@ func ParseFIB(data []byte) (*FileInformationBlock, error) {
 	if err := binary.Read(r, binary.LittleEndian, &fib.Csw); err != nil {
 		return nil, fmt.Errorf("fib: failed to read Csw at offset %d: %w", currentOffset, err)
 	}
-	
+
 	// Skip FibRgW
 	fibRgWBytes := make([]byte, 28)
 	if _, err := r.Read(fibRgWBytes); err != nil {
 		return nil, fmt.Errorf("fib: failed to read FibRgW: %w", err)
 	}
-	
+
 	currentOffset, _ = r.Seek(0, 1)
 	if err := binary.Read(r, binary.LittleEndian, &fib.Cslw); err != nil {
 		return nil, fmt.Errorf("fib: failed to read Cslw at offset %d: %w", currentOffset, err)
 	}
-	
-	// Skip FibRgLw 
+
+	// Skip FibRgLw
 	fibRgLwBytes := make([]byte, 76) // Known size for FibRgLw97
 	if _, err := r.Read(fibRgLwBytes); err != nil {
 		return nil, fmt.Errorf("fib: failed to read FibRgLw: %w", err)
 	}
-	
+
 	currentOffset, _ = r.Seek(0, 1)
 	if err := binary.Read(r, binary.LittleEndian, &fib.CbRgFcLcb); err != nil {
 		return nil, fmt.Errorf("fib: failed to read CbRgFcLcb at offset %d: %w", currentOffset, err)
@@ -148,12 +148,12 @@ func parseBasicFcLcb(fib *FileInformationBlock) error {
 	// For most Word versions, FcClx and LcbClx are at predictable offsets
 	// This is a fallback for unknown nFib versions
 	const fcClxOffset = 264 // Common offset for FcClx in FibRgFcLcb
-	
+
 	if len(fib.RgFcLcbBlob) >= fcClxOffset+8 {
 		fib.RgFcLcb.FcClx = binary.LittleEndian.Uint32(fib.RgFcLcbBlob[fcClxOffset:])
 		fib.RgFcLcb.LcbClx = binary.LittleEndian.Uint32(fib.RgFcLcbBlob[fcClxOffset+4:])
 	}
-	
+
 	return nil
 }
 

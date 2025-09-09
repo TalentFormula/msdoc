@@ -10,17 +10,17 @@ import (
 // EncryptionHeader represents the encryption information stored in the table stream
 // for encrypted Word documents.
 type EncryptionHeader struct {
-	Version         uint16   // Encryption version
-	EncryptionFlags uint32   // Encryption flags
-	HeaderSize      uint32   // Size of encryption header
-	ProviderType    uint32   // Cryptographic provider type
-	AlgID           uint32   // Algorithm identifier
-	AlgHashID       uint32   // Hash algorithm identifier
-	KeySize         uint32   // Key size in bits
-	ProviderName    string   // Cryptographic provider name
-	Salt            []byte   // Random salt for key derivation
+	Version           uint16 // Encryption version
+	EncryptionFlags   uint32 // Encryption flags
+	HeaderSize        uint32 // Size of encryption header
+	ProviderType      uint32 // Cryptographic provider type
+	AlgID             uint32 // Algorithm identifier
+	AlgHashID         uint32 // Hash algorithm identifier
+	KeySize           uint32 // Key size in bits
+	ProviderName      string // Cryptographic provider name
+	Salt              []byte // Random salt for key derivation
 	EncryptedVerifier []byte // Encrypted verifier for password validation
-	VerifierHash    []byte   // Hash of the verifier
+	VerifierHash      []byte // Hash of the verifier
 }
 
 // ParseEncryptionHeader parses the encryption header from table stream data.
