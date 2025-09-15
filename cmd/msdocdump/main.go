@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/TalentFormula/msdoc/pkg/msdoc"
 	"log"
 	"os"
+
+	"github.com/TalentFormula/msdoc/pkg"
 )
 
 func main() {
@@ -21,8 +22,8 @@ func main() {
 	}
 	defer doc.Close()
 
-	// Extract plain text
-	text, err := doc.Text()
+	// Extract text with markdown formatting (hyperlinks as [text](url))
+	text, err := doc.MarkdownText()
 	if err != nil {
 		log.Fatalf("failed to extract text: %v", err)
 	}
@@ -33,6 +34,15 @@ func main() {
 	meta := doc.Metadata()
 	fmt.Println("\n=== Metadata ===")
 	fmt.Printf("Title: %s\n", meta.Title)
+	fmt.Printf("Subject: %s\n", meta.Subject)
 	fmt.Printf("Author: %s\n", meta.Author)
+	fmt.Printf("Keywords: %s\n", meta.Keywords)
+	fmt.Printf("Comments: %s\n", meta.Comments)
+	fmt.Printf("Application Name: %s\n", meta.ApplicationName)
+	fmt.Printf("Company: %s\n", meta.Company)
+	fmt.Printf("Manager: %s\n", meta.Manager)
+	fmt.Printf("Category: %s\n", meta.Category)
+	fmt.Printf("Content Status: %s\n", meta.ContentStatus)
+	fmt.Printf("Content Type: %s\n", meta.ContentType)
 	fmt.Printf("Created: %s\n", meta.Created)
 }
